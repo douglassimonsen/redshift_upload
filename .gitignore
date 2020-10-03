@@ -1,1 +1,4 @@
 *.csv
+*.pyc
+test.py
+constants.py
