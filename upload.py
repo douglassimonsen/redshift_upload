@@ -290,10 +290,10 @@ def upload(
     column_types = get_defined_columns(source, column_types, interface, upload_options)
     source, column_types = fix_column_types(source, column_types)
 
-    if not upload_options['drop_table']:
+    if not upload_options['drop_table'] and interface.table_exists:
         compare_with_remote(source, interface)
 
-    if upload_options['drop_table']:
+    if upload_options['drop_table'] and interface.table_exists:
         log_dependent_views(interface)
 
     interface.load_to_s3(source.to_csv(None, index=False, header=False))

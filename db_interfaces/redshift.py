@@ -20,6 +20,7 @@ class Interface:
         self.redshift_password = redshift_password
         self.access_key = access_key
         self.secret_key = secret_key
+        self.table_exists = self.check_table_exists()
 
     def get_db_conn(self):
         return psycopg2.connect(
@@ -143,6 +144,24 @@ class Interface:
                 except Exception as exc:
                     pass
             conn.commit()
+
+    def check_table_exists(self):
+        query = '''
+        select count(*) as cnt
+        from pg_tables
+        where schemaname = %(schema_name)s
+        and tablename = %(table_name)s
+        '''
+        with self.get_db_conn() as conn:
+            table_count = pandas.read_sql(
+                query,
+                conn,
+                params={
+                    'schema_name': self.schema_name,
+                    'table_name': self.table_name
+                }
+            )['cnt'].iat[0]
+        return table_count != 0
 
     def copy_table(self):
         query = copy_table_query.format(
