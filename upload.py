@@ -171,7 +171,7 @@ def fix_column_types(df, predefined_columns):  # check what happens ot the dic o
                 df[colname] = col_cast
 
         types.append(col_type)
-    return df, types
+    return df, dict(zip(df.columns, types))
 
 
 def get_defined_columns(source, columns, interface, upload_options):
@@ -223,6 +223,42 @@ def compare_with_remote(source_df, interface):
     source_df = source_df[remote_cols]
 
 
+def s3_to_redshift(interface, column_types, upload_options):
+    def delete_table():
+        with interface.get_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'drop table if exists {interface.schema_name}.{interface.table_name} cascade')
+            conn.commit()
+
+    def truncate_table():
+        with interface.get_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'truncate {interface.schema_name}.{interface.table_name}')
+            conn.commit()
+
+    def create_table():
+        columns = ', '.join(f'"{k}" {v}' for k, v in column_types.items())
+        with interface.get_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'create table if not exists {interface.schema_name}.{interface.table_name} ({columns}) diststyle even')
+            conn.commit()
+
+    if upload_options['drop_table']:
+        delete_table()
+        create_table()
+    if upload_options['truncate_table']:
+        truncate_table()
+    interface.copy_table()
+    with interface.get_db_conn() as conn:
+        cursor = conn.cursor()
+        for group in upload_options['grant_access']:
+            grant = f"GRANT SELECT ON {interface.schema_name}.{interface.table_name} TO {group}"
+            cursor.execute(grant)
+        conn.commit()
+    if upload_options['cleanup_s3']:
+        interface.delete_s3_object()
+
+
 def upload(
     source=None,
     source_args=None,
@@ -262,3 +298,4 @@ def upload(
 
     interface.load_to_s3(source.to_csv(None, index=False, header=False))
     interface.get_exclusive_lock()
+    s3_to_redshift(interface, column_types, upload_options)

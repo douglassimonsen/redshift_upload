@@ -8,6 +8,7 @@ import datetime
 dependent_view_query = open('db_interfaces/redshift_dependent_views.sql', 'r').read()
 remote_cols_query = open('db_interfaces/redshift_remote_cols.sql', 'r').read()
 competing_conns_query = open('db_interfaces/redshift_kill_connections.sql', 'r').read()
+copy_table_query = open('db_interfaces/redshift_copy_table.sql', 'r').read()
 
 
 class Interface:
@@ -141,4 +142,16 @@ class Interface:
                     conn.cursor().execute(f"select pg_terminate_backend('{row['pid']}')")
                 except Exception as exc:
                     pass
+            conn.commit()
+
+    def copy_table(self):
+        query = copy_table_query.format(
+            file_destination=f"{self.schema_name}.{self.table_name}",
+            source=f"s3://{constants.bucket}/{self.s3_name}",
+            access=self.access_key,
+            secret=self.secret_key
+        )
+        with self.get_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
             conn.commit()
