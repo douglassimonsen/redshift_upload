@@ -1,20 +1,25 @@
 import psycopg2
 import pandas
 import constants
-
+import boto3
+import botocore
+import datetime
 
 dependent_view_query = open('db_interfaces/redshift_dependent_views.sql', 'r').read()
+remote_cols_query = open('db_interfaces/redshift_remote_cols.sql', 'r').read()
 
 
 class Interface:
-    def __init__(self, schema_name, table_name, redshift_username, redshift_password):
+    def __init__(self, schema_name, table_name, redshift_username, redshift_password, access_key, secret_key):
         self.name = 'redshift'
         self.schema_name = schema_name
         self.table_name = table_name
         self.redshift_username = redshift_username
         self.redshift_password = redshift_password
+        self.access_key = access_key
+        self.secret_key = secret_key
 
-    def get_conn(self):
+    def get_db_conn(self):
         return psycopg2.connect(
             host=constants.host,
             dbname=constants.dbname,
@@ -22,6 +27,15 @@ class Interface:
             user=self.redshift_username,
             password=self.redshift_password,
             connect_timeout=180,
+        )
+
+    def get_s3_conn(self):
+        return boto3.resource(
+            "s3",
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+            use_ssl=False,
+            region_name="us-east-1",
         )
 
     def get_columns(self):
@@ -52,7 +66,7 @@ class Interface:
         select "column", type from PG_TABLE_DEF
         where tablename = %(table_name)s;
         '''
-        with self.get_conn() as conn:
+        with self.get_db_conn() as conn:
             columns = pandas.read_sql(query, conn, params={'schema': self.schema_name, 'table_name': self.table_name})
         return {col: {"type": type_mapping(t)} for col, t in zip(columns["column"], columns["type"])}
 
@@ -66,7 +80,7 @@ class Interface:
         unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df
         final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
 
-        with self.get_conn() as conn:
+        with self.get_db_conn() as conn:
             while len(unsearched_views):
                 view = unsearched_views[0]
                 df = pandas.read_sql(
@@ -92,3 +106,27 @@ class Interface:
         except ValueError:
             dependencies = {}
         return [get_view_query(row, dependencies) for i, row in final_df.iterrows()]
+
+    def get_remote_cols(self):
+        with self.get_db_conn() as conn:
+            return pandas.read_sql(remote_cols_query, conn, params={'table_name': self.table_name})['attname'].to_list()
+
+    def load_to_s3(self, source_df):
+        print(source_df)
+        self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
+        s3_conn = self.get_s3_conn()
+        obj = s3_conn.Object(constants.bucket, self.s3_name)
+        obj.delete()
+        obj.wait_until_not_exists()
+
+        try:
+            response = obj.put(Body=source_df)
+        except botocore.exceptions.ClientError as e:
+            if "(SignatureDoesNotMatch)" in str(e):
+                raise ValueError("The error below occurred when the S3 credentials expire. As Data Analytics to distribute new ones")
+            raise BaseException
+
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
+
+        obj.wait_until_exists()

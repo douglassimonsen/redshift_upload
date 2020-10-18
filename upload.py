@@ -18,7 +18,7 @@ def load_source(source, source_args, source_kwargs):
         return source
 
 
-def serialize_source(df, predefined_columns):  # check what happens ot the dic over multiple uses
+def fix_column_types(df, predefined_columns):  # check what happens ot the dic over multiple uses
     def to_bool(col):
         assert col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").isin(["true", "false", "nan"]).all()  # Nones get turned into nans and nans get stringified
         return col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").apply(lambda x: str(x == "true") if x != "nan" else "")  # null is blank because the copy command defines it that way
@@ -120,7 +120,7 @@ def serialize_source(df, predefined_columns):  # check what happens ot the dic o
         col_count = cols[:i].to_list().count(col)
         if col_count != 0:
             col = f"{col}{col_count}"
-        return col.replace(".", "_")
+        return col.replace(".", "_")[:constants.MAX_COLUMN_LENGTH]
 
     def try_types(col):
         for col_type, conv_func in [("boolean", to_bool), ("bigint", to_int), ("double precision", to_float), ("date", to_date), ("timestamp", to_dt)]:
@@ -171,7 +171,7 @@ def serialize_source(df, predefined_columns):  # check what happens ot the dic o
                 df[colname] = col_cast
 
         types.append(col_type)
-    return df.to_csv(None, index=False, header=False), types
+    return df, types
 
 
 def get_defined_columns(source, columns, interface, upload_options):
@@ -183,7 +183,7 @@ def get_defined_columns(source, columns, interface, upload_options):
 
     columns = convert_column_type_structure(columns)
     if upload_options['drop_table'] is False:
-        existing_columns = redshift.Interface().get_columns(schema_name, table_name, redshift_username, redshift_password)
+        existing_columns = interface.get_columns()
     else:
         existing_columns = {}
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
@@ -191,8 +191,8 @@ def get_defined_columns(source, columns, interface, upload_options):
 
 def log_dependent_views(interface):
     def log_query(metadata):
-        metadata["text"] = f"set search_path = '{schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
-        base_path = f"temp_view_folder/{redshift.Interface().name}/{table_name}"
+        metadata["text"] = f"set search_path = '{interface.schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
+        base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
         base_file = f"{base_path}/{metadata['view_name']}"
         os.makedirs(base_path, exist_ok=True)
         ages = ["_oldest", "_older", ""]
@@ -210,16 +210,32 @@ def log_dependent_views(interface):
             log_query(view_metadata)
 
 
+def compare_with_remote(source_df, interface):
+    remote_cols = interface.get_remote_cols()
+    remote_cols_set = set(remote_cols)
+    local_cols = set(source_df.columns.to_list())
+    if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
+        missing_cols = ', '.join(local_cols.difference(remote_cols_set))
+        raise ValueError(f"Haven't implemented adding new columns to the remote table yet. Bad columns are \"{missing_cols}\". Failing now")
+    else:
+        for col in remote_cols_set.difference(local_cols):
+            source_df[col] = None
+    source_df = source_df[remote_cols]
+
+
 def upload(
     source=None,
     source_args=None,
     source_kwargs=None,
-    columns=None,
+    column_types=None,
     schema_name=None,
     table_name=None,
     redshift_username=None,
     redshift_password=None,
-    upload_options={}):
+    access_key=None,
+    secret_key=None,
+    upload_options={}
+):
 
     UPLOAD_DEFAULTS = {
         "truncate_table": False,
@@ -230,14 +246,18 @@ def upload(
     upload_options = {**UPLOAD_DEFAULTS, **upload_options}
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
-    columns = columns or {}
+    column_types = column_types or {}
 
-    interface = redshift.Interface(schema_name, table_name, redshift_username, redshift_password)
+    interface = redshift.Interface(schema_name, table_name, redshift_username, redshift_password, access_key, secret_key)
     source = load_source(source, source_args, source_kwargs)
 
-    columns = get_defined_columns(source, columns, interface, upload_options)
-    source, columns = serialize_source(source, columns)
+    column_types = get_defined_columns(source, column_types, interface, upload_options)
+    source, column_types = fix_column_types(source, column_types)
+
+    if not upload_options['drop_table']:
+        compare_with_remote(source, interface)
 
     if upload_options['drop_table']:
         log_dependent_views(interface)
-    print(columns)
+
+    interface.load_to_s3(source.to_csv(None, index=False, header=False))
