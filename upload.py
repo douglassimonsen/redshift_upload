@@ -261,3 +261,4 @@ def upload(
         log_dependent_views(interface)
 
     interface.load_to_s3(source.to_csv(None, index=False, header=False))
+    interface.get_exclusive_lock()

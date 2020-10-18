@@ -7,6 +7,7 @@ import datetime
 
 dependent_view_query = open('db_interfaces/redshift_dependent_views.sql', 'r').read()
 remote_cols_query = open('db_interfaces/redshift_remote_cols.sql', 'r').read()
+competing_conns_query = open('db_interfaces/redshift_kill_connections.sql', 'r').read()
 
 
 class Interface:
@@ -130,3 +131,14 @@ class Interface:
             raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
 
         obj.wait_until_exists()
+
+    def get_exclusive_lock(self):
+        with self.get_db_conn() as conn:
+            processes = pandas.read_sql(competing_conns_query, conn, params={'table_name': self.table_name})
+            processes = processes[processes["pid"] != conn.get_backend_pid()]
+            for _, row in processes.iterrows():
+                try:
+                    conn.cursor().execute(f"select pg_terminate_backend('{row['pid']}')")
+                except Exception as exc:
+                    pass
+            conn.commit()
