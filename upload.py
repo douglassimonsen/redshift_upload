@@ -174,7 +174,7 @@ def serialize_source(df, predefined_columns):  # check what happens ot the dic o
     return df.to_csv(None, index=False, header=False), types
 
 
-def get_defined_columns(source, columns, schema_name, table_name, redshift_username, redshift_password, upload_options):
+def get_defined_columns(source, columns, interface, upload_options):
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):
@@ -189,7 +189,7 @@ def get_defined_columns(source, columns, schema_name, table_name, redshift_usern
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def log_dependent_views(schema_name, table_name, redshift_username, redshift_password):
+def log_dependent_views(interface):
     def log_query(metadata):
         metadata["text"] = f"set search_path = '{schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
         base_path = f"temp_view_folder/{redshift.Interface().name}/{table_name}"
@@ -204,7 +204,7 @@ def log_dependent_views(schema_name, table_name, redshift_username, redshift_pas
         with open(f"{base_file}.txt", "w") as f:
             json.dump(metadata, f)
 
-    dependent_views = redshift.Interface().get_dependent_views(schema_name, table_name, redshift_username, redshift_password)
+    dependent_views = interface.get_dependent_views()
     with utilities.change_directory():
         for view_metadata in dependent_views:
             log_query(view_metadata)
@@ -228,10 +228,16 @@ def upload(
         "grant_access": [],
     }
     upload_options = {**UPLOAD_DEFAULTS, **upload_options}
+    source_args = source_args or []
+    source_kwargs = source_kwargs or {}
+    columns = columns or {}
 
-    source = load_source(source, source_args or [], source_kwargs or {})
-    columns = get_defined_columns(source, columns or {}, schema_name, table_name, redshift_username, redshift_password, upload_options)
+    interface = redshift.Interface(schema_name, table_name, redshift_username, redshift_password)
+    source = load_source(source, source_args, source_kwargs)
+
+    columns = get_defined_columns(source, columns, interface, upload_options)
     source, columns = serialize_source(source, columns)
+
     if upload_options['drop_table']:
-        log_dependent_views(schema_name, table_name, redshift_username, redshift_password)
+        log_dependent_views(interface)
     print(columns)

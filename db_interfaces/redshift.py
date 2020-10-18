@@ -7,7 +7,24 @@ dependent_view_query = open('db_interfaces/redshift_dependent_views.sql', 'r').r
 
 
 class Interface:
-    def get_columns(self, schema, table_name, username, password):
+    def __init__(self, schema_name, table_name, redshift_username, redshift_password):
+        self.name = 'redshift'
+        self.schema_name = schema_name
+        self.table_name = table_name
+        self.redshift_username = redshift_username
+        self.redshift_password = redshift_password
+
+    def get_conn(self):
+        return psycopg2.connect(
+            host=constants.host,
+            dbname=constants.dbname,
+            port=constants.port,
+            user=self.redshift_username,
+            password=self.redshift_password,
+            connect_timeout=180,
+        )
+
+    def get_columns(self):
         def type_mapping(t):
             """
             basing off of https://www.flydata.com/blog/redshift-supported-data-types/
@@ -35,35 +52,21 @@ class Interface:
         select "column", type from PG_TABLE_DEF
         where tablename = %(table_name)s;
         '''
-        with psycopg2.connect(
-            host=constants.host,
-            dbname=constants.dbname,
-            port=constants.port,
-            user=username,
-            password=password,
-            connect_timeout=180,
-        ) as conn:
-            columns = pandas.read_sql(query, conn, params={'schema': schema, 'table_name': table_name})
+        with self.get_conn() as conn:
+            columns = pandas.read_sql(query, conn, params={'schema': self.schema_name, 'table_name': self.table_name})
         return {col: {"type": type_mapping(t)} for col, t in zip(columns["column"], columns["type"])}
 
-    def get_dependent_views(self, schema, table_name, username, password):
+    def get_dependent_views(self):
         def get_view_query(row, dependencies):
             view = row["dependent_schema"] + "." + row["dependent_view"]
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{view}', true) as text"
             df = pandas.read_sql(view_text_query, self.db_conn)
             return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": df.text[0], "view_type": row["dependent_kind"]}
 
-        unsearched_views = [f"{schema}.{table_name}"]  # the table is searched, but will not appear in the final_df
+        unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df
         final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
 
-        with psycopg2.connect(
-            host=constants.host,
-            dbname=constants.dbname,
-            port=constants.port,
-            user=username,
-            password=password,
-            connect_timeout=180,
-        ) as conn:
+        with self.get_conn() as conn:
             while len(unsearched_views):
                 view = unsearched_views[0]
                 df = pandas.read_sql(
