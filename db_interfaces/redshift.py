@@ -5,10 +5,10 @@ import boto3
 import botocore
 import datetime
 
-dependent_view_query = open('db_interfaces/redshift_dependent_views.sql', 'r').read()
-remote_cols_query = open('db_interfaces/redshift_remote_cols.sql', 'r').read()
-competing_conns_query = open('db_interfaces/redshift_kill_connections.sql', 'r').read()
-copy_table_query = open('db_interfaces/redshift_copy_table.sql', 'r').read()
+dependent_view_query = open('db_interfaces/redshift_queries/dependent_views.sql', 'r').read()
+remote_cols_query = open('db_interfaces/redshift_queries/remote_cols.sql', 'r').read()
+competing_conns_query = open('db_interfaces/redshift_queries/kill_connections.sql', 'r').read()
+copy_table_query = open('db_interfaces/redshift_queries/copy_table.sql', 'r').read()
 
 
 class Interface:
