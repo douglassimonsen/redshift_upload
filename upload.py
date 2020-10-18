@@ -6,6 +6,8 @@ import utilities
 import os
 import shutil
 import json
+import datetime
+import psycopg2
 
 
 def load_source(source, source_args, source_kwargs):
@@ -227,20 +229,20 @@ def s3_to_redshift(interface, column_types, upload_options):
     def delete_table():
         with interface.get_db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute(f'drop table if exists {interface.schema_name}.{interface.table_name} cascade')
+            cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
             conn.commit()
 
     def truncate_table():
         with interface.get_db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute(f'truncate {interface.schema_name}.{interface.table_name}')
+            cursor.execute(f'truncate {interface.full_table_name}')
             conn.commit()
 
     def create_table():
         columns = ', '.join(f'"{k}" {v}' for k, v in column_types.items())
         with interface.get_db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute(f'create table if not exists {interface.schema_name}.{interface.table_name} ({columns}) diststyle even')
+            cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle even')
             conn.commit()
 
     if upload_options['drop_table']:
@@ -249,14 +251,62 @@ def s3_to_redshift(interface, column_types, upload_options):
     if upload_options['truncate_table']:
         truncate_table()
     interface.copy_table()
-    with interface.get_db_conn() as conn:
-        cursor = conn.cursor()
-        for group in upload_options['grant_access']:
-            grant = f"GRANT SELECT ON {interface.schema_name}.{interface.table_name} TO {group}"
+    if upload_options['grant_access']:
+        with interface.get_db_conn() as conn:
+            cursor = conn.cursor()
+            grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
             cursor.execute(grant)
-        conn.commit()
+            conn.commit()
     if upload_options['cleanup_s3']:
         interface.delete_s3_object()
+
+
+def reinstantiate_views(interface, drop_table, grant_access):
+    age_limit = datetime.datetime.today() - pandas.Timedelta(hours=4)
+    views = []
+    base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
+    with utilities.change_directory():
+        possible_views = [
+            os.path.join(base_path, view)
+            for view in os.listdir(base_path)
+            if "_older" not in view and "_oldest" not in view
+        ]
+        for f in [f for f in possible_views if os.path.isfile(f)]:
+            if datetime.datetime.fromtimestamp(os.path.getmtime(f)) > age_limit:
+                with open(f, "r") as fl:
+                    metadata = json.load(fl)
+                views.append(metadata)
+
+    tries = 1000  # arbitrary large value. Should only happen very rarely??
+    views_not_yet_initialized = [view["view_name"] for view in views]
+    with interface.get_db_conn() as conn:
+        cursor = conn.cursor()
+        while len(views) and tries:
+            view = views.pop(0)
+            if len([x for x in view["dependencies"] if x in views_not_yet_initialized]) > 0:  # can't initialize because it has dependencies that don't exist yet
+                views.append(view)
+                tries -= 1
+                continue
+
+            try:
+                if drop_table is True:
+                    cursor.execute(view["text"])
+                    if grant_access:
+                        cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
+                elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
+                    pass
+                else:  # only get here when complete_refresh is False and view_type is materialized view
+                    cursor.execute(f"refresh materialized view {view['view_name']}")
+                    cursor.close()
+                conn.commit()
+
+            except psycopg2.ProgrammingError as e:
+                conn.rollback()
+
+            if view["view_name"] in views_not_yet_initialized:
+                views_not_yet_initialized.remove(view["view_name"])
+                os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
+
 
 
 def upload(
@@ -299,3 +349,5 @@ def upload(
     interface.load_to_s3(source.to_csv(None, index=False, header=False))
     interface.get_exclusive_lock()
     s3_to_redshift(interface, column_types, upload_options)
+    if interface.table_exists:
+        reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])

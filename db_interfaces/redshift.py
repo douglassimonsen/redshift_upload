@@ -16,6 +16,7 @@ class Interface:
         self.name = 'redshift'
         self.schema_name = schema_name
         self.table_name = table_name
+        self.full_table_name = f"{schema_name}.{table_name}"
         self.redshift_username = redshift_username
         self.redshift_password = redshift_password
         self.access_key = access_key
@@ -74,13 +75,14 @@ class Interface:
         return {col: {"type": type_mapping(t)} for col, t in zip(columns["column"], columns["type"])}
 
     def get_dependent_views(self):
-        def get_view_query(row, dependencies):
+        def get_view_query(row, dependencies, conn):
             view = row["dependent_schema"] + "." + row["dependent_view"]
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{view}', true) as text"
-            df = pandas.read_sql(view_text_query, self.db_conn)
+
+            df = pandas.read_sql(view_text_query, conn)
             return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": df.text[0], "view_type": row["dependent_kind"]}
 
-        unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df
+        unsearched_views = [self.full_table_name]  # the table is searched, but will not appear in the final_df
         final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
 
         with self.get_db_conn() as conn:
@@ -108,14 +110,14 @@ class Interface:
             dependencies = dict(zip(dependencies["name"], dependencies["dependencies"]))
         except ValueError:
             dependencies = {}
-        return [get_view_query(row, dependencies) for i, row in final_df.iterrows()]
+        with self.get_db_conn() as conn:
+            return [get_view_query(row, dependencies, conn) for i, row in final_df.iterrows()]
 
     def get_remote_cols(self):
         with self.get_db_conn() as conn:
             return pandas.read_sql(remote_cols_query, conn, params={'table_name': self.table_name})['attname'].to_list()
 
     def load_to_s3(self, source_df):
-        print(source_df)
         self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
         s3_conn = self.get_s3_conn()
         obj = s3_conn.Object(constants.bucket, self.s3_name)
@@ -165,7 +167,7 @@ class Interface:
 
     def copy_table(self):
         query = copy_table_query.format(
-            file_destination=f"{self.schema_name}.{self.table_name}",
+            file_destination=self.full_table_name,
             source=f"s3://{constants.bucket}/{self.s3_name}",
             access=self.access_key,
             secret=self.secret_key

@@ -13,3 +13,4 @@ The uploader goes through the following steps:
 --8) Copy data to table
 9) Reuploads dependent views (if complete refresh)
 10) Records the upload
+11) Create a topological ordering for the views to be reinstantiated
