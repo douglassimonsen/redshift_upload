@@ -8,6 +8,7 @@ import shutil
 import json
 import datetime
 import psycopg2
+import getpass
 
 
 def load_source(source, source_args, source_kwargs):
@@ -308,6 +309,24 @@ def reinstantiate_views(interface, drop_table, grant_access):
                 os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
 
 
+def record_upload(interface, source):
+    query = f'''
+    insert into {constants.records_table}
+           (  table_name,     upload_time,     rows,     redshift_user,     os_user)
+    values (%(table_name)s, %(upload_time)s, %(rows)s, %(redshift_user)s, %(os_user)s)
+    '''
+    data = {
+        'table_name': interface.full_table_name,
+        'upload_time': datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
+        'rows': source.shape[0],
+        'redshift_user': interface.redshift_username,
+        'os_user': getpass.getuser(),  # I recognize it's not great, but hopefully no one running this is malicious. https://stackoverflow.com/a/842096/6465644
+    }
+    with interface.get_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, data)
+        conn.commit()
+
 
 def upload(
     source=None,
@@ -322,7 +341,6 @@ def upload(
     secret_key=None,
     upload_options={}
 ):
-
     UPLOAD_DEFAULTS = {
         "truncate_table": False,
         "drop_table": False,
@@ -351,3 +369,4 @@ def upload(
     s3_to_redshift(interface, column_types, upload_options)
     if interface.table_exists:
         reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
+    record_upload(interface, source)
