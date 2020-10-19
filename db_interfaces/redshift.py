@@ -176,3 +176,22 @@ class Interface:
             cursor = conn.cursor()
             cursor.execute(query)
             conn.commit()
+
+    def expand_varchar_column(self, colname, max_str_len):
+        if max_str_len > 65535:  # max limit in Redshift, as of 2020/03/27, but probably forever
+            return False
+
+        query = f"""
+        alter table {self.full_table_name} alter column "{colname}" type varchar({max_str_len})
+        """
+        with self.get_db_conn() as conn:
+            conn.commit()
+            old_isolation_level = conn.isolation_level
+            conn.set_isolation_level(0)
+            cursor = conn.cursor()
+            cursor.execute(query)
+            cursor.close()
+            conn.commit()
+            conn.set_isolation_level(old_isolation_level)
+            print(f"'{colname}' should have length {max_str_len}")
+        return True

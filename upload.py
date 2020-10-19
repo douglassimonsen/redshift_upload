@@ -9,6 +9,7 @@ import json
 import datetime
 import psycopg2
 import getpass
+import re
 
 
 def load_source(source, source_args, source_kwargs):
@@ -21,7 +22,7 @@ def load_source(source, source_args, source_kwargs):
         return source
 
 
-def fix_column_types(df, predefined_columns):  # check what happens ot the dic over multiple uses
+def fix_column_types(df, predefined_columns, interface, drop_table):  # check what happens ot the dic over multiple uses
     def to_bool(col):
         assert col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").isin(["true", "false", "nan"]).all()  # Nones get turned into nans and nans get stringified
         return col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").apply(lambda x: str(x == "true") if x != "nan" else "")  # null is blank because the copy command defines it that way
@@ -173,6 +174,16 @@ def fix_column_types(df, predefined_columns):  # check what happens ot the dic o
                 col_type, col_cast = try_types(col)
                 df[colname] = col_cast
 
+        if col_type.startswith("varchar") and interface.table_exists and not drop_table:
+            remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))
+            bad_strings = df[colname][df[colname].astype(str).str.len() > remote_varchar_length]
+            bad_strings_formatted = "\n".join(f"{x} <- (length: {len(str(x))}, index: {i})" for x, i in zip(bad_strings, bad_strings.index))
+            max_str_len = max(bad_strings.astype(str).str.len(), default=-1)
+            if bad_strings.shape[0] > 0:
+                if not interface.expand_varchar_column(colname, max_str_len):
+                    raise ValueError("Failed to expand the varchar column enough to accomodate the new data.")
+                else:
+                    col_type = re.sub(constants.varchar_len_re, f"({max_str_len})", col_type, count=1)
         types.append(col_type)
     return df, dict(zip(df.columns, types))
 
@@ -350,7 +361,7 @@ def upload(
     source = load_source(source, source_args, source_kwargs)
 
     column_types = get_defined_columns(source, column_types, interface, upload_options)
-    source, column_types = fix_column_types(source, column_types)
+    source, column_types = fix_column_types(source, column_types, interface, upload_options['drop_table'])
 
     if not upload_options['drop_table'] and interface.table_exists:
         compare_with_remote(source, interface)
