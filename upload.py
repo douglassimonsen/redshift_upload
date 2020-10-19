@@ -198,11 +198,6 @@ def log_dependent_views(interface):
         base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
         base_file = f"{base_path}/{metadata['view_name']}"
         os.makedirs(base_path, exist_ok=True)
-        ages = ["_oldest", "_older", ""]
-
-        for later_age, earlier_age in zip(ages[:-1], ages[1:]):
-            if os.path.exists(f"{base_file}{earlier_age}.txt"):
-                shutil.copy(f"{base_file}{earlier_age}.txt", f"{base_file}{later_age}.txt")
 
         with open(f"{base_file}.txt", "w") as f:
             json.dump(metadata, f)
@@ -270,7 +265,6 @@ def reinstantiate_views(interface, drop_table, grant_access):
         possible_views = [
             os.path.join(base_path, view)
             for view in os.listdir(base_path)
-            if "_older" not in view and "_oldest" not in view
         ]
         for f in [f for f in possible_views if os.path.isfile(f)]:
             if datetime.datetime.fromtimestamp(os.path.getmtime(f)) > age_limit:
