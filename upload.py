@@ -134,7 +134,7 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
             except:
                 pass
 
-        string_length = min(65535, max(20, 2 * col.astype(str).str.len().max()))
+        string_length = min(65535, col.astype(str).str.len().max())
         return f"varchar({string_length})", to_string(col)
 
     def cast(col, col_type):

@@ -14,6 +14,7 @@ The uploader goes through the following steps:
 --9) Reuploads dependent views (if complete refresh)
 --10) Records the upload
 11) Create a topological ordering for the views to be reinstantiated
-12) Make the varchar length closer to the actual max string length
-13) Create a better locking functions
-14) Lock around editing the varchar columns as well
+--12) Make the varchar length closer to the actual max string length
+--13) Create a better locking function
+--14) Lock around editing the varchar columns as well
+15) Can't handle emojis/weird characters
