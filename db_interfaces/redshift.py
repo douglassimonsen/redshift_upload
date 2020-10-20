@@ -164,17 +164,14 @@ class Interface:
         )['cnt'].iat[0]
         return table_count != 0
 
-    def copy_table(self):
+    def copy_table(self, cursor):
         query = copy_table_query.format(
             file_destination=self.full_table_name,
             source=f"s3://{constants.bucket}/{self.s3_name}",
             access=self.access_key,
             secret=self.secret_key
         )
-        conn = self.get_db_conn()
-        cursor = conn.cursor()
         cursor.execute(query)
-        conn.commit()
 
     def expand_varchar_column(self, colname, max_str_len):
         if max_str_len > 65535:  # max limit in Redshift, as of 2020/03/27, but probably forever

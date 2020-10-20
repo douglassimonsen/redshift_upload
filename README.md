@@ -1,7 +1,7 @@
 The uploader goes through the following steps:
 --1) Loads the Data
 2) Fleshes out the parameters and checks for coherence
-3) Persist a single connection
+--3) Persist a single connection
 --4) Expand varchar columns if necessary
 --3) Check whether table already exists
 --3) Initializes an interface

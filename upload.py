@@ -4,7 +4,6 @@ import constants
 import numpy
 import utilities
 import os
-import shutil
 import json
 import datetime
 import psycopg2
@@ -234,36 +233,36 @@ def compare_with_remote(source_df, interface):
 
 def s3_to_redshift(interface, column_types, upload_options):
     def delete_table():
-        conn = interface.get_db_conn()
-        cursor = conn.cursor()
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
-        conn.commit()
 
     def truncate_table():
-        conn = interface.get_db_conn()
-        cursor = conn.cursor()
         cursor.execute(f'truncate {interface.full_table_name}')
-        conn.commit()
 
     def create_table():
         columns = ', '.join(f'"{k}" {v}' for k, v in column_types.items())
-        conn = interface.get_db_conn()
-        cursor = conn.cursor()
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle even')
-        conn.commit()
+
+    def grant_access():
+        grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
+        cursor.execute(grant)
+
+    interface.get_exclusive_lock()
+    conn = interface.get_db_conn()
+    cursor = conn.cursor()
 
     if upload_options['drop_table']:
         delete_table()
         create_table()
     if upload_options['truncate_table']:
         truncate_table()
-    interface.copy_table()
+
+    interface.copy_table(cursor)
+
     if upload_options['grant_access']:
-        conn = interface.get_db_conn()
-        cursor = conn.cursor()
-        grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
-        cursor.execute(grant)
-        conn.commit()
+        grant_access()
+
+    conn.commit()
+
     if upload_options['cleanup_s3']:
         interface.delete_s3_object()
 
@@ -370,7 +369,6 @@ def upload(
         log_dependent_views(interface)
 
     interface.load_to_s3(source.to_csv(None, index=False, header=False))
-    interface.get_exclusive_lock()
     s3_to_redshift(interface, column_types, upload_options)
     if interface.table_exists:
         reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
