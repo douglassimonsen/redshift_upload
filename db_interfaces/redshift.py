@@ -138,14 +138,21 @@ class Interface:
         obj.wait_until_exists()
 
     def get_exclusive_lock(self):
-        processes = pandas.read_sql(competing_conns_query, self.get_db_conn(), params={'table_name': self.table_name})
-        processes = processes[processes["pid"] != self.get_db_conn().get_backend_pid()]
+        conn = self.get_db_conn()
+        cursor = conn.cursor()
+        if not self.table_exists:  # nothing to lock against,
+            return conn, cursor
+
+        processes = pandas.read_sql(competing_conns_query, conn, params={'table_name': self.table_name})
+        processes = processes[processes["pid"] != conn.get_backend_pid()]
         for _, row in processes.iterrows():
             try:
-                self.get_db_conn().cursor().execute(f"select pg_terminate_backend('{row['pid']}')")
+                cursor.execute(f"select pg_terminate_backend('{row['pid']}')")
             except Exception as exc:
                 pass
-        self.get_db_conn().commit()
+        conn.commit()
+        cursor.execute(f"lock table {self.full_table_name}")
+        return conn, cursor
 
     def check_table_exists(self):
         query = '''
@@ -180,13 +187,10 @@ class Interface:
         query = f"""
         alter table {self.full_table_name} alter column "{colname}" type varchar({max_str_len})
         """
-        conn = self.get_db_conn()
-        conn.commit()
+        conn, cursor = self.get_exclusive_lock()
         old_isolation_level = conn.isolation_level
         conn.set_isolation_level(0)
-        cursor = conn.cursor()
         cursor.execute(query)
-        cursor.close()
         conn.commit()
         conn.set_isolation_level(old_isolation_level)
         print(f"'{colname}' should have length {max_str_len}")

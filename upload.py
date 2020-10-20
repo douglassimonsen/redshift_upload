@@ -248,9 +248,7 @@ def s3_to_redshift(interface, column_types, upload_options):
         grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
         cursor.execute(grant)
 
-    interface.get_exclusive_lock()
-    conn = interface.get_db_conn()
-    cursor = conn.cursor()
+    conn, cursor = interface.get_exclusive_lock()
 
     if upload_options['drop_table']:
         delete_table()
