@@ -21,26 +21,32 @@ class Interface:
         self.redshift_password = redshift_password
         self.access_key = access_key
         self.secret_key = secret_key
-        self.table_exists = self.check_table_exists()
+        self._db_conn = None
+        self._s3_conn = None
+        self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
 
     def get_db_conn(self):
-        return psycopg2.connect(
-            host=constants.host,
-            dbname=constants.dbname,
-            port=constants.port,
-            user=self.redshift_username,
-            password=self.redshift_password,
-            connect_timeout=180,
-        )
+        if self._db_conn is None:
+            self._db_conn = psycopg2.connect(
+                host=constants.host,
+                dbname=constants.dbname,
+                port=constants.port,
+                user=self.redshift_username,
+                password=self.redshift_password,
+                connect_timeout=180,
+            )
+        return self._db_conn
 
     def get_s3_conn(self):
-        return boto3.resource(
-            "s3",
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-            use_ssl=False,
-            region_name="us-east-1",
-        )
+        if self._s3_conn is None:
+            self._s3_conn = boto3.resource(
+                "s3",
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+                use_ssl=False,
+                region_name="us-east-1",
+            )
+        return self._s3_conn
 
     def get_columns(self):
         def type_mapping(t):
@@ -70,35 +76,33 @@ class Interface:
         select "column", type from PG_TABLE_DEF
         where tablename = %(table_name)s;
         '''
-        with self.get_db_conn() as conn:
-            columns = pandas.read_sql(query, conn, params={'schema': self.schema_name, 'table_name': self.table_name})
+        columns = pandas.read_sql(query, self.get_db_conn(), params={'schema': self.schema_name, 'table_name': self.table_name})
         return {col: {"type": type_mapping(t)} for col, t in zip(columns["column"], columns["type"])}
 
     def get_dependent_views(self):
-        def get_view_query(row, dependencies, conn):
+        def get_view_query(row, dependencies):
             view = row["dependent_schema"] + "." + row["dependent_view"]
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{view}', true) as text"
 
-            df = pandas.read_sql(view_text_query, conn)
+            df = pandas.read_sql(view_text_query, self.get_db_conn())
             return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": df.text[0], "view_type": row["dependent_kind"]}
 
         unsearched_views = [self.full_table_name]  # the table is searched, but will not appear in the final_df
         final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
 
-        with self.get_db_conn() as conn:
-            while len(unsearched_views):
-                view = unsearched_views[0]
-                df = pandas.read_sql(
-                    dependent_view_query,
-                    conn,
-                    params={
-                        'schema_name': view.split(".", 1)[0],
-                        'table_name': view.split(".", 1)[1]
-                    }
-                )
-                final_df = final_df.append(df, ignore_index=True)
-                unsearched_views.extend([f'{row["dependent_schema"]}.{row["dependent_view"]}' for i, row in df.iterrows()])
-                unsearched_views.pop(0)
+        while len(unsearched_views):
+            view = unsearched_views[0]
+            df = pandas.read_sql(
+                dependent_view_query,
+                self.get_db_conn(),
+                params={
+                    'schema_name': view.split(".", 1)[0],
+                    'table_name': view.split(".", 1)[1]
+                }
+            )
+            final_df = final_df.append(df, ignore_index=True)
+            unsearched_views.extend([f'{row["dependent_schema"]}.{row["dependent_view"]}' for i, row in df.iterrows()])
+            unsearched_views.pop(0)
 
         try:
             final_df["name"] = final_df.apply(lambda row: f'{row["dependent_schema"]}.{row["dependent_view"]}', axis=1)
@@ -110,17 +114,14 @@ class Interface:
             dependencies = dict(zip(dependencies["name"], dependencies["dependencies"]))
         except ValueError:
             dependencies = {}
-        with self.get_db_conn() as conn:
-            return [get_view_query(row, dependencies, conn) for i, row in final_df.iterrows()]
+        return [get_view_query(row, dependencies) for i, row in final_df.iterrows()]
 
     def get_remote_cols(self):
-        with self.get_db_conn() as conn:
-            return pandas.read_sql(remote_cols_query, conn, params={'table_name': self.table_name})['attname'].to_list()
+        return pandas.read_sql(remote_cols_query, self.get_db_conn(), params={'table_name': self.table_name})['attname'].to_list()
 
     def load_to_s3(self, source_df):
         self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
-        s3_conn = self.get_s3_conn()
-        obj = s3_conn.Object(constants.bucket, self.s3_name)
+        obj = self.get_s3_conn().Object(constants.bucket, self.s3_name)
         obj.delete()
         obj.wait_until_not_exists()
 
@@ -137,15 +138,14 @@ class Interface:
         obj.wait_until_exists()
 
     def get_exclusive_lock(self):
-        with self.get_db_conn() as conn:
-            processes = pandas.read_sql(competing_conns_query, conn, params={'table_name': self.table_name})
-            processes = processes[processes["pid"] != conn.get_backend_pid()]
-            for _, row in processes.iterrows():
-                try:
-                    conn.cursor().execute(f"select pg_terminate_backend('{row['pid']}')")
-                except Exception as exc:
-                    pass
-            conn.commit()
+        processes = pandas.read_sql(competing_conns_query, self.get_db_conn(), params={'table_name': self.table_name})
+        processes = processes[processes["pid"] != self.get_db_conn().get_backend_pid()]
+        for _, row in processes.iterrows():
+            try:
+                self.get_db_conn().cursor().execute(f"select pg_terminate_backend('{row['pid']}')")
+            except Exception as exc:
+                pass
+        self.get_db_conn().commit()
 
     def check_table_exists(self):
         query = '''
@@ -154,15 +154,14 @@ class Interface:
         where schemaname = %(schema_name)s
         and tablename = %(table_name)s
         '''
-        with self.get_db_conn() as conn:
-            table_count = pandas.read_sql(
-                query,
-                conn,
-                params={
-                    'schema_name': self.schema_name,
-                    'table_name': self.table_name
-                }
-            )['cnt'].iat[0]
+        table_count = pandas.read_sql(
+            query,
+            self.get_db_conn(),
+            params={
+                'schema_name': self.schema_name,
+                'table_name': self.table_name
+            }
+        )['cnt'].iat[0]
         return table_count != 0
 
     def copy_table(self):
@@ -172,10 +171,10 @@ class Interface:
             access=self.access_key,
             secret=self.secret_key
         )
-        with self.get_db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-            conn.commit()
+        conn = self.get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute(query)
+        conn.commit()
 
     def expand_varchar_column(self, colname, max_str_len):
         if max_str_len > 65535:  # max limit in Redshift, as of 2020/03/27, but probably forever
@@ -184,14 +183,14 @@ class Interface:
         query = f"""
         alter table {self.full_table_name} alter column "{colname}" type varchar({max_str_len})
         """
-        with self.get_db_conn() as conn:
-            conn.commit()
-            old_isolation_level = conn.isolation_level
-            conn.set_isolation_level(0)
-            cursor = conn.cursor()
-            cursor.execute(query)
-            cursor.close()
-            conn.commit()
-            conn.set_isolation_level(old_isolation_level)
-            print(f"'{colname}' should have length {max_str_len}")
+        conn = self.get_db_conn()
+        conn.commit()
+        old_isolation_level = conn.isolation_level
+        conn.set_isolation_level(0)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        cursor.close()
+        conn.commit()
+        conn.set_isolation_level(old_isolation_level)
+        print(f"'{colname}' should have length {max_str_len}")
         return True

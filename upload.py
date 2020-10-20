@@ -234,23 +234,23 @@ def compare_with_remote(source_df, interface):
 
 def s3_to_redshift(interface, column_types, upload_options):
     def delete_table():
-        with interface.get_db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
-            conn.commit()
+        conn = interface.get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
+        conn.commit()
 
     def truncate_table():
-        with interface.get_db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f'truncate {interface.full_table_name}')
-            conn.commit()
+        conn = interface.get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute(f'truncate {interface.full_table_name}')
+        conn.commit()
 
     def create_table():
         columns = ', '.join(f'"{k}" {v}' for k, v in column_types.items())
-        with interface.get_db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle even')
-            conn.commit()
+        conn = interface.get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle even')
+        conn.commit()
 
     if upload_options['drop_table']:
         delete_table()
@@ -259,11 +259,11 @@ def s3_to_redshift(interface, column_types, upload_options):
         truncate_table()
     interface.copy_table()
     if upload_options['grant_access']:
-        with interface.get_db_conn() as conn:
-            cursor = conn.cursor()
-            grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
-            cursor.execute(grant)
-            conn.commit()
+        conn = interface.get_db_conn()
+        cursor = conn.cursor()
+        grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
+        cursor.execute(grant)
+        conn.commit()
     if upload_options['cleanup_s3']:
         interface.delete_s3_object()
 
@@ -285,33 +285,33 @@ def reinstantiate_views(interface, drop_table, grant_access):
 
     tries = 1000  # arbitrary large value. Should only happen very rarely??
     views_not_yet_initialized = [view["view_name"] for view in views]
-    with interface.get_db_conn() as conn:
-        cursor = conn.cursor()
-        while len(views) and tries:
-            view = views.pop(0)
-            if len([x for x in view["dependencies"] if x in views_not_yet_initialized]) > 0:  # can't initialize because it has dependencies that don't exist yet
-                views.append(view)
-                tries -= 1
-                continue
+    conn = interface.get_db_conn()
+    cursor = conn.cursor()
+    while len(views) and tries:
+        view = views.pop(0)
+        if len([x for x in view["dependencies"] if x in views_not_yet_initialized]) > 0:  # can't initialize because it has dependencies that don't exist yet
+            views.append(view)
+            tries -= 1
+            continue
 
-            try:
-                if drop_table is True:
-                    cursor.execute(view["text"])
-                    if grant_access:
-                        cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
-                elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
-                    pass
-                else:  # only get here when complete_refresh is False and view_type is materialized view
-                    cursor.execute(f"refresh materialized view {view['view_name']}")
-                    cursor.close()
-                conn.commit()
+        try:
+            if drop_table is True:
+                cursor.execute(view["text"])
+                if grant_access:
+                    cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
+            elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
+                pass
+            else:  # only get here when complete_refresh is False and view_type is materialized view
+                cursor.execute(f"refresh materialized view {view['view_name']}")
+                cursor.close()
+            conn.commit()
 
-            except psycopg2.ProgrammingError as e:
-                conn.rollback()
+        except psycopg2.ProgrammingError as e:
+            conn.rollback()
 
-            if view["view_name"] in views_not_yet_initialized:
-                views_not_yet_initialized.remove(view["view_name"])
-                os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
+        if view["view_name"] in views_not_yet_initialized:
+            views_not_yet_initialized.remove(view["view_name"])
+            os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
 
 
 def record_upload(interface, source):
@@ -327,10 +327,10 @@ def record_upload(interface, source):
         'redshift_user': interface.redshift_username,
         'os_user': getpass.getuser(),  # I recognize it's not great, but hopefully no one running this is malicious. https://stackoverflow.com/a/842096/6465644
     }
-    with interface.get_db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query, data)
-        conn.commit()
+    conn = interface.get_db_conn()
+    cursor = conn.cursor()
+    cursor.execute(query, data)
+    conn.commit()
 
 
 def upload(
