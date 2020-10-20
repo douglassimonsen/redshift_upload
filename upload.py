@@ -19,6 +19,8 @@ def load_source(source, source_args, source_kwargs):
             return pandas.read_csv(source, *source_args, **source_kwargs)
     if isinstance(source, pandas.DataFrame):
         return source
+    else:
+        return pandas.DataFrame(source)  # please don't do this
 
 
 def fix_column_types(df, predefined_columns, interface, drop_table):  # check what happens ot the dic over multiple uses
