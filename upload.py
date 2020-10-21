@@ -330,6 +330,11 @@ def record_upload(interface, source):
     conn.commit()
 
 
+def check_coherence(upload_options):
+    if upload_options['truncate_table'] is True and upload_options['drop_table'] is True:
+        raise ValueError("You must only choose one. It doesn't make sense to do both")
+
+
 def upload(
     source=None,
     source_args=None,
@@ -353,6 +358,7 @@ def upload(
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
+    check_coherence(upload_options)
 
     interface = redshift.Interface(schema_name, table_name, redshift_username, redshift_password, access_key, secret_key)
     source = load_source(source, source_args, source_kwargs)
