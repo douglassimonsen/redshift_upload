@@ -10,6 +10,8 @@ import psycopg2
 import getpass
 import re
 import toposort
+import logging
+log = logging.getLogger("redshift_utilities")
 
 
 def load_source(source, source_args, source_kwargs):
@@ -31,9 +33,9 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
 
     def bad_bool(col):
         bad_rows = col[~col.replace({None: "nan"}).astype(str).str.lower().isin(["true", "false", "nan"])].iloc[:5]
-        constants.log.error(f"Column: {col.name} failed to be cast to bool")
-        constants.log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
-        constants.log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
+        log.error(f"Column: {col.name} failed to be cast to bool")
+        log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
+        log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
     def to_date(col):
         if pandas.isnull(col).all():  # pandas.to_datetime can fail on a fully empty column
@@ -50,9 +52,9 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
         dts = col[~mask1]
         mask2 = dts != pandas.to_datetime(dts.dt.date)  # has non-zero time component
         bad_rows = col[mask1 | mask2].iloc[:5]
-        constants.log.error(f"Column: {col.name} failed to be cast to date")
-        constants.log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
-        constants.log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
+        log.error(f"Column: {col.name} failed to be cast to date")
+        log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
+        log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
     def to_dt(col):
         if pandas.isnull(col).all():  # pandas.to_datetime can fail on a fully empty column
@@ -61,9 +63,9 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
 
     def bad_dt(col):
         bad_rows = col[pandas.to_datetime(col, errors="coerce").isna()].iloc[:5]
-        constants.log.error(f"Column: {col.name} failed to be cast to datetime")
-        constants.log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
-        constants.log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
+        log.error(f"Column: {col.name} failed to be cast to datetime")
+        log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
+        log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
     def to_int(col):
         return col.astype("float64").astype("Int64")  # this float64 is necessary to cast columns like [1.0, "2", "3.0"] to [1, 2, 3]
@@ -100,18 +102,18 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
             bad_indices = bad_rows.index
             bad_values = bad_rows.values
 
-        constants.log.error(f"Column: {col.name} failed to be cast to integer")
-        constants.log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_values)}")
-        constants.log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_indices)}")
+        log.error(f"Column: {col.name} failed to be cast to integer")
+        log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_values)}")
+        log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_indices)}")
 
     def to_float(col):
         return col.astype("float64")
 
     def bad_float(col):
         bad_rows = col[pandas.to_numeric(col, errors="coerce").isna()].iloc[:5]
-        constants.log.error(f"Column: {col.name} failed to be cast to datetime")
-        constants.log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
-        constants.log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
+        log.error(f"Column: {col.name} failed to be cast to datetime")
+        log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
+        log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
     def to_string(col):
         return col.astype(str).replace({k: numpy.NaN for k in ["nan", "NaN", "None"]})
@@ -313,7 +315,7 @@ def reinstantiate_views(interface, drop_table, grant_access):
 
 def record_upload(interface, source):
     query = f'''
-    insert into {constants.records_table}
+    insert into {interface.aws_info['records_table']}
            (  table_name,     upload_time,     rows,     redshift_user,     os_user)
     values (%(table_name)s, %(upload_time)s, %(rows)s, %(redshift_user)s, %(os_user)s)
     '''
@@ -321,7 +323,7 @@ def record_upload(interface, source):
         'table_name': interface.full_table_name,
         'upload_time': datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
         'rows': source.shape[0],
-        'redshift_user': interface.redshift_username,
+        'redshift_user': interface.aws_info['redshift_username'],
         'os_user': getpass.getuser(),  # I recognize it's not great, but hopefully no one running this is malicious. https://stackoverflow.com/a/842096/6465644
     }
     conn = interface.get_db_conn()
@@ -330,9 +332,18 @@ def record_upload(interface, source):
     conn.commit()
 
 
-def check_coherence(upload_options):
+def check_coherence(upload_options, aws_info):
+    upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
+    aws_info = aws_info or {}
+
     if upload_options['truncate_table'] is True and upload_options['drop_table'] is True:
         raise ValueError("You must only choose one. It doesn't make sense to do both")
+
+    for c in ["redshift_username", "redshift_password", "access_key", "secret_key", "bucket", "host", "dbname", "port"]:
+        if aws_info.get(c) is None:
+            raise ValueError(f"You need to define {c} in the aws_info dictionary")
+
+    return upload_options, aws_info
 
 
 def upload(
@@ -342,25 +353,16 @@ def upload(
     column_types=None,
     schema_name=None,
     table_name=None,
-    redshift_username=None,
-    redshift_password=None,
-    access_key=None,
-    secret_key=None,
-    upload_options={}
+    upload_options=None,
+    aws_info=None,
 ):
-    UPLOAD_DEFAULTS = {
-        "truncate_table": False,
-        "drop_table": False,
-        "cleanup_s3": False,
-        "grant_access": [],
-    }
-    upload_options = {**UPLOAD_DEFAULTS, **upload_options}
+
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
-    check_coherence(upload_options)
+    upload_options, aws_info = check_coherence(upload_options, aws_info)
 
-    interface = redshift.Interface(schema_name, table_name, redshift_username, redshift_password, access_key, secret_key)
+    interface = redshift.Interface(schema_name, table_name, aws_info)
     source = load_source(source, source_args, source_kwargs)
 
     column_types = get_defined_columns(source, column_types, interface, upload_options)
@@ -376,4 +378,5 @@ def upload(
     s3_to_redshift(interface, column_types, upload_options)
     if interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
-    record_upload(interface, source)
+    if interface.aws_info.get("records_table") is not None:
+        record_upload(interface, source)

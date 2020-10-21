@@ -12,15 +12,13 @@ copy_table_query = open('db_interfaces/redshift_queries/copy_table.sql', 'r').re
 
 
 class Interface:
-    def __init__(self, schema_name, table_name, redshift_username, redshift_password, access_key, secret_key):
+    def __init__(self, schema_name, table_name, aws_info):
         self.name = 'redshift'
         self.schema_name = schema_name
         self.table_name = table_name
         self.full_table_name = f"{schema_name}.{table_name}"
-        self.redshift_username = redshift_username
-        self.redshift_password = redshift_password
-        self.access_key = access_key
-        self.secret_key = secret_key
+        self.aws_info = aws_info
+
         self._db_conn = None
         self._s3_conn = None
         self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
@@ -28,11 +26,11 @@ class Interface:
     def get_db_conn(self):
         if self._db_conn is None:
             self._db_conn = psycopg2.connect(
-                host=constants.host,
-                dbname=constants.dbname,
-                port=constants.port,
-                user=self.redshift_username,
-                password=self.redshift_password,
+                host=self.aws_info['host'],
+                dbname=self.aws_info['dbname'],
+                port=self.aws_info['port'],
+                user=self.aws_info['redshift_username'],
+                password=self.aws_info['redshift_password'],
                 connect_timeout=180,
             )
         return self._db_conn
@@ -41,8 +39,8 @@ class Interface:
         if self._s3_conn is None:
             self._s3_conn = boto3.resource(
                 "s3",
-                aws_access_key_id=self.access_key,
-                aws_secret_access_key=self.secret_key,
+                aws_access_key_id=self.aws_info['access_key'],
+                aws_secret_access_key=self.aws_info['secret_key'],
                 use_ssl=False,
                 region_name="us-east-1",
             )
@@ -121,7 +119,7 @@ class Interface:
 
     def load_to_s3(self, source_df):
         self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
-        obj = self.get_s3_conn().Object(constants.bucket, self.s3_name)
+        obj = self.get_s3_conn().Object(self.aws_info['bucket'], self.s3_name)
         obj.delete()
         obj.wait_until_not_exists()
 
@@ -174,9 +172,9 @@ class Interface:
     def copy_table(self, cursor):
         query = copy_table_query.format(
             file_destination=self.full_table_name,
-            source=f"s3://{constants.bucket}/{self.s3_name}",
-            access=self.access_key,
-            secret=self.secret_key
+            source=f"s3://{self.aws_info['bucket']}/{self.s3_name}",
+            access=self.aws_info['access_key'],
+            secret=self.aws_info['secret_key']
         )
         cursor.execute(query)
 
