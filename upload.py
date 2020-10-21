@@ -9,6 +9,7 @@ import datetime
 import psycopg2
 import getpass
 import re
+import toposort
 
 
 def load_source(source, source_args, source_kwargs):
@@ -268,31 +269,30 @@ def s3_to_redshift(interface, column_types, upload_options):
 
 
 def reinstantiate_views(interface, drop_table, grant_access):
+    def gen_order(views):
+        base_table = set([interface.full_table_name])
+        dependencies = {}
+        for view in views.values():
+            dependencies[view['view_name']] = set(view['dependencies']) - base_table
+        return toposort.toposort_flatten(dependencies)
+
     age_limit = datetime.datetime.today() - pandas.Timedelta(hours=4)
-    views = []
+    views = {}
     base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
     with utilities.change_directory():
-        possible_views = [
-            os.path.join(base_path, view)
-            for view in os.listdir(base_path)
-        ]
-        for f in [f for f in possible_views if os.path.isfile(f)]:
+        possible_views = [os.path.join(base_path, view) for view in os.listdir(base_path) if view.endswith(".txt")]  # stupid thumbs.db ruining my life
+        for f in possible_views:
             if datetime.datetime.fromtimestamp(os.path.getmtime(f)) > age_limit:
                 with open(f, "r") as fl:
-                    metadata = json.load(fl)
-                views.append(metadata)
+                    view_info = json.load(fl)
+                views[view_info['view_name']] = view_info
 
-    tries = 1000  # arbitrary large value. Should only happen very rarely??
-    views_not_yet_initialized = [view["view_name"] for view in views]
+    reload_order = gen_order(views)
+
     conn = interface.get_db_conn()
     cursor = conn.cursor()
-    while len(views) and tries:
-        view = views.pop(0)
-        if len([x for x in view["dependencies"] if x in views_not_yet_initialized]) > 0:  # can't initialize because it has dependencies that don't exist yet
-            views.append(view)
-            tries -= 1
-            continue
-
+    for view_name in reload_order:
+        view = views[view_name]
         try:
             if drop_table is True:
                 cursor.execute(view["text"])
@@ -304,13 +304,11 @@ def reinstantiate_views(interface, drop_table, grant_access):
                 cursor.execute(f"refresh materialized view {view['view_name']}")
                 cursor.close()
             conn.commit()
-
-        except psycopg2.ProgrammingError as e:
-            conn.rollback()
-
-        if view["view_name"] in views_not_yet_initialized:
-            views_not_yet_initialized.remove(view["view_name"])
             os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
+        except psycopg2.ProgrammingError as e:  # if the type of column changed, a view can disapper.
+            conn.rollback()
+            print(f"We were unable to load view: {view_name}")
+            print(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
 def record_upload(interface, source):
@@ -370,6 +368,6 @@ def upload(
 
     interface.load_to_s3(source.to_csv(None, index=False, header=False))
     s3_to_redshift(interface, column_types, upload_options)
-    if interface.table_exists:
+    if interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     record_upload(interface, source)
