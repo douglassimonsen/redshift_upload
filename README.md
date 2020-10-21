@@ -17,5 +17,7 @@ The uploader goes through the following steps:
 --12) Make the varchar length closer to the actual max string length
 --13) Create a better locking function
 --14) Lock around editing the varchar columns as well
-15) Can't handle emojis/weird characters
+--15) Can't handle emojis/weird characters
 --16) Stop dependence on constants.py file
+17) Optionally specify diststyle, distkey, sortkey, backup no
+18) Allow you to specify multiple files if you specify all column types

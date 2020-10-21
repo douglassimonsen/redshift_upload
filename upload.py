@@ -138,7 +138,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
             except:
                 pass
 
-        string_length = min(65535, col.astype(str).str.len().max())
+        string_length = min(65535, col.astype(str).str.encode("utf-8").str.len().max())  # necessary to handle emojis, since len('Aݔ') is 2, but it contains 3 bytes which is what Redshift cares about
         return f"varchar({string_length})", to_string(col)
 
     def cast(col: pandas.Series, col_type: str):
@@ -375,7 +375,7 @@ def upload(
     if upload_options['drop_table'] and interface.table_exists:
         log_dependent_views(interface)
 
-    interface.load_to_s3(source.to_csv(None, index=False, header=False))
+    interface.load_to_s3(source.to_csv(None, index=False, header=False, encoding="utf-8"))
     s3_to_redshift(interface, column_types, upload_options)
     if interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
