@@ -180,7 +180,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
                 df[colname] = col_cast
 
         if col_type.startswith("varchar") and interface.table_exists and not drop_table:
-            remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))
+            remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))  # type: ignore
             bad_strings = df[colname][df[colname].astype(str).str.len() > remote_varchar_length]
             bad_strings_formatted = "\n".join(f"{x} <- (length: {len(str(x))}, index: {i})" for x, i in zip(bad_strings, bad_strings.index))
             max_str_len = max(bad_strings.astype(str).str.len(), default=-1)
@@ -272,7 +272,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
 
 def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List):
-    def gen_order(views: List):
+    def gen_order(views: Dict):
         base_table = set([interface.full_table_name])
         dependencies = {}
         for view in views.values():
