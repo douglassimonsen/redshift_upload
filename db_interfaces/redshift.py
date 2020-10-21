@@ -1,6 +1,5 @@
 import psycopg2
 import pandas
-import constants
 import boto3
 import botocore
 import datetime

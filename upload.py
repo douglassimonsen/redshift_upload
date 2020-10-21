@@ -11,10 +11,11 @@ import getpass
 import re
 import toposort
 import logging
+from typing import Dict, List, Union
 log = logging.getLogger("redshift_utilities")
+SourceOptions = Union[str, pandas.DataFrame, List[Dict]]
 
-
-def load_source(source, source_args, source_kwargs):
+def load_source(source: SourceOptions, source_args: List, source_kwargs: Dict):
     if isinstance(source, str):
         if source.endswith('.xlsx'):
             return pandas.read_excel(source, *source_args, **source_kwargs)
@@ -26,18 +27,18 @@ def load_source(source, source_args, source_kwargs):
         return pandas.DataFrame(source)  # please don't do this
 
 
-def fix_column_types(df, predefined_columns, interface, drop_table):  # check what happens ot the dic over multiple uses
-    def to_bool(col):
+def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool):  # check what happens ot the dic over multiple uses
+    def to_bool(col: pandas.Series):
         assert col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").isin(["true", "false", "nan"]).all()  # Nones get turned into nans and nans get stringified
         return col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").apply(lambda x: str(x == "true") if x != "nan" else "")  # null is blank because the copy command defines it that way
 
-    def bad_bool(col):
+    def bad_bool(col: pandas.Series):
         bad_rows = col[~col.replace({None: "nan"}).astype(str).str.lower().isin(["true", "false", "nan"])].iloc[:5]
         log.error(f"Column: {col.name} failed to be cast to bool")
         log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
         log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
-    def to_date(col):
+    def to_date(col: pandas.Series):
         if pandas.isnull(col).all():  # pandas.to_datetime can fail on a fully empty column
             return col.fillna("")
         col = pandas.to_datetime(col)
@@ -47,7 +48,7 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
 
         return col.dt.strftime(constants.DATE_FORMAT).replace({constants.NaT: "", "NaT": ""})
 
-    def bad_date(col):
+    def bad_date(col: pandas.Series):
         mask1 = pandas.to_datetime(col, errors="coerce").isna()  # not even datetimes
         dts = col[~mask1]
         mask2 = dts != pandas.to_datetime(dts.dt.date)  # has non-zero time component
@@ -56,21 +57,21 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
         log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
         log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
-    def to_dt(col):
+    def to_dt(col: pandas.Series):
         if pandas.isnull(col).all():  # pandas.to_datetime can fail on a fully empty column
             return col.fillna("")
         return pandas.to_datetime(col).dt.strftime(constants.DATETIME_FORMAT).replace({constants.NaT: "", "NaT": ""})
 
-    def bad_dt(col):
+    def bad_dt(col: pandas.Series):
         bad_rows = col[pandas.to_datetime(col, errors="coerce").isna()].iloc[:5]
         log.error(f"Column: {col.name} failed to be cast to datetime")
         log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
         log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
-    def to_int(col):
+    def to_int(col: pandas.Series):
         return col.astype("float64").astype("Int64")  # this float64 is necessary to cast columns like [1.0, "2", "3.0"] to [1, 2, 3]
 
-    def bad_int(col):
+    def bad_int(col: pandas.Series):
         """
         This has been designed to match the functions
 
@@ -106,16 +107,16 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
         log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_values)}")
         log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_indices)}")
 
-    def to_float(col):
+    def to_float(col: pandas.Series):
         return col.astype("float64")
 
-    def bad_float(col):
+    def bad_float(col: pandas.Series):
         bad_rows = col[pandas.to_numeric(col, errors="coerce").isna()].iloc[:5]
         log.error(f"Column: {col.name} failed to be cast to datetime")
         log.error(f"The first 5 bad values are: {', '.join(str(x) for x in bad_rows.values)}")
         log.error(f"The first 5 bad indices are: {', '.join(str(x) for x in bad_rows.index)}")
 
-    def to_string(col):
+    def to_string(col: pandas.Series):
         return col.astype(str).replace({k: numpy.NaN for k in ["nan", "NaN", "None"]})
 
     def protect_colname(cols):
@@ -124,13 +125,13 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
             ret_cols.append(f'"{c}"')
         return ret_cols
 
-    def clean_column(col, i, cols):
+    def clean_column(col: pandas.Series, i: int, cols: pandas.Series):
         col_count = cols[:i].to_list().count(col)
         if col_count != 0:
             col = f"{col}{col_count}"
         return col.replace(".", "_")[:constants.MAX_COLUMN_LENGTH]
 
-    def try_types(col):
+    def try_types(col: pandas.Series):
         for col_type, conv_func in [("boolean", to_bool), ("bigint", to_int), ("double precision", to_float), ("date", to_date), ("timestamp", to_dt)]:
             try:
                 return col_type, conv_func(col)
@@ -140,7 +141,7 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
         string_length = min(65535, col.astype(str).str.len().max())
         return f"varchar({string_length})", to_string(col)
 
-    def cast(col, col_type):
+    def cast(col: pandas.Series, col_type: str):
         col_type = col_type.lower()
         col_conv = {
             "boolean": to_bool,
@@ -192,7 +193,7 @@ def fix_column_types(df, predefined_columns, interface, drop_table):  # check wh
     return df, dict(zip(df.columns, types))
 
 
-def get_defined_columns(source, columns, interface, upload_options):
+def get_defined_columns(source: pandas.DataFrame, columns: Dict, interface: redshift.Interface, upload_options: Dict):
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):
@@ -207,8 +208,8 @@ def get_defined_columns(source, columns, interface, upload_options):
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def log_dependent_views(interface):
-    def log_query(metadata):
+def log_dependent_views(interface: redshift.Interface):
+    def log_query(metadata: Dict):
         metadata["text"] = f"set search_path = '{interface.schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
         base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
         base_file = f"{base_path}/{metadata['view_name']}"
@@ -223,7 +224,7 @@ def log_dependent_views(interface):
             log_query(view_metadata)
 
 
-def compare_with_remote(source_df, interface):
+def compare_with_remote(source_df: pandas.DataFrame, interface: redshift.Interface):
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)
     local_cols = set(source_df.columns.to_list())
@@ -236,7 +237,7 @@ def compare_with_remote(source_df, interface):
     source_df = source_df[remote_cols]
 
 
-def s3_to_redshift(interface, column_types, upload_options):
+def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict):
     def delete_table():
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
 
@@ -270,8 +271,8 @@ def s3_to_redshift(interface, column_types, upload_options):
         interface.delete_s3_object()
 
 
-def reinstantiate_views(interface, drop_table, grant_access):
-    def gen_order(views):
+def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List):
+    def gen_order(views: List):
         base_table = set([interface.full_table_name])
         dependencies = {}
         for view in views.values():
@@ -313,7 +314,7 @@ def reinstantiate_views(interface, drop_table, grant_access):
             print(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
-def record_upload(interface, source):
+def record_upload(interface: redshift.Interface, source: pandas.DataFrame):
     query = f'''
     insert into {interface.aws_info['records_table']}
            (  table_name,     upload_time,     rows,     redshift_user,     os_user)
@@ -332,7 +333,7 @@ def record_upload(interface, source):
     conn.commit()
 
 
-def check_coherence(upload_options, aws_info):
+def check_coherence(upload_options: Dict, aws_info: Dict):
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
 
@@ -347,14 +348,14 @@ def check_coherence(upload_options, aws_info):
 
 
 def upload(
-    source=None,
-    source_args=None,
-    source_kwargs=None,
-    column_types=None,
-    schema_name=None,
-    table_name=None,
-    upload_options=None,
-    aws_info=None,
+    source: SourceOptions=None,
+    source_args: List=None,
+    source_kwargs: Dict=None,
+    column_types: Dict=None,
+    schema_name: str=None,
+    table_name: str=None,
+    upload_options: Dict=None,
+    aws_info: Dict=None,
 ):
 
     source_args = source_args or []

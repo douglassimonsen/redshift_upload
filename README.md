@@ -18,4 +18,4 @@ The uploader goes through the following steps:
 --13) Create a better locking function
 --14) Lock around editing the varchar columns as well
 15) Can't handle emojis/weird characters
-16) Stop dependence on constants.py file
+--16) Stop dependence on constants.py file
