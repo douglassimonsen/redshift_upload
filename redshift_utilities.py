@@ -62,8 +62,15 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
         cursor.execute(f'truncate {interface.full_table_name}')
 
     def create_table():
-        columns = ', '.join(f'"{k}" {v}' for k, v in column_types.items())
-        cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle even')
+        def get_col(col_name, col_type):
+            base = f'"{col_name}" {col_type}'
+            for opt in ['distkey', 'sortkey']:
+                if upload_options[opt] == col_name:
+                    base += f' {opt}'
+            return base
+
+        columns = ', '.join(get_col(col_name, col_type) for col_name, col_type in column_types.items())
+        cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 
     def grant_access():
         grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"

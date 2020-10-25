@@ -19,8 +19,8 @@ The uploader goes through the following steps:
 --14) Lock around editing the varchar columns as well
 --15) Can't handle emojis/weird characters
 --16) Stop dependence on constants.py file
-17) Optionally specify diststyle, distkey, sortkey, backup no
+--17) Optionally specify diststyle, distkey, sortkey
 18) Allow you to specify multiple files if you specify all column types
 19) Properly log things
 --20) split functionality into multiple files
-21) Create a blank aws_creds.json to explain how it should look
+--21) Create a blank aws_creds.json to explain how it should look

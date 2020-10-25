@@ -16,6 +16,9 @@ UPLOAD_DEFAULTS = {
     "drop_table": False,
     "cleanup_s3": False,
     "grant_access": [],
+    "diststyle": "even",
+    "distkey": None,
+    "sortkey": None,
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"

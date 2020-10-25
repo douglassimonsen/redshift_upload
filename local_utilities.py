@@ -189,6 +189,8 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
 def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict):
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
+    if upload_options['distkey'] or upload_options['sortkey']:
+        upload_options['diststyle'] = 'key'
 
     if not schema_name or not table_name:
         raise ValueError("You need to define the name of the table you want to load to")
