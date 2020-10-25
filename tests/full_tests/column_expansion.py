@@ -20,10 +20,12 @@ def test_column_expansion():
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
+    exit()
     upload.upload(
         source=df2,
         schema_name="sb_pm",
         table_name="unit_test_column_expansion",
         upload_options={"drop_table": False},
-        aws_info=aws_creds
+        aws_info=aws_creds,
     )
+test_column_expansion()
