@@ -20,8 +20,9 @@ The uploader goes through the following steps:
 --15) Can't handle emojis/weird characters
 --16) Stop dependence on constants.py file
 --17) Optionally specify diststyle, distkey, sortkey
-18) Allow you to specify multiple files if you specify all column types
+--18) Allow you to specify multiple files if you specify all column types
 19) Properly log things
 --20) split functionality into multiple files
 --21) Create a blank aws_creds.json to explain how it should look
-22) Add ability to clean up s3 files
+--22) Add ability to clean up s3 files
+23) Add requirements.txt

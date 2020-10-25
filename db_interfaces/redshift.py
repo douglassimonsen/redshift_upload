@@ -3,10 +3,12 @@ import pandas
 import boto3
 import botocore
 import datetime
+import logging
 if __name__ == '__main__':
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utilities
+log = logging.getLogger("redshift_utilities")
 
 with base_utilities.change_directory():
     dependent_view_query = open('redshift_queries/dependent_views.sql', 'r').read()
@@ -141,6 +143,16 @@ class Interface:
                 raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
 
             obj.wait_until_exists()
+
+    def cleanup_s3(self, parallel_loads: int):
+        for i in range(parallel_loads):
+            obj = self.s3_conn.Object(self.aws_info['bucket'], self.s3_name + str(i))
+            try:
+                obj.delete()
+            except Exception as e:
+                log.error("Could not delete {}\nException: {}".format(self.s3_name + str(i), e))
+                log.error("Attempting to Overwrite with empty string to minimze storage use")
+                obj.put(Body=b"")
 
     def get_exclusive_lock(self):
         conn = self.get_db_conn()

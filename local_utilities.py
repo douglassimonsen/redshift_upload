@@ -12,9 +12,11 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
     if isinstance(source, str):
         if source.endswith('.xlsx'):
             return pandas.read_excel(source, *source_args, **source_kwargs)
-        if source.endswith(".csv"):
+        elif source.endswith(".csv"):
             return pandas.read_csv(source, *source_args, **source_kwargs)
-    if isinstance(source, pandas.DataFrame):
+        else:
+            raise ValueError("Your input was invalid")
+    elif isinstance(source, pandas.DataFrame):
         return source
     else:
         return pandas.DataFrame(source)  # please don't do this

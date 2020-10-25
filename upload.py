@@ -34,8 +34,9 @@ def upload(
     if upload_options['drop_table'] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    if upload_options['load_in_parallel'] > 1:
-        chunks = numpy.arange(source.shape[0]) // upload_options['load_in_parallel']
+    load_in_parallel = min(upload_options['load_in_parallel'], source.shape[0])  # cannot have more groups than rows, otherwise it breaks
+    if load_in_parallel > 1:
+        chunks = numpy.arange(source.shape[0]) // load_in_parallel
         sources = [chunk.to_csv(None, index=False, header=False, encoding="utf-8") for _, chunk in source.groupby(chunks)]
     else:
         sources = [source.to_csv(None, index=False, header=False, encoding="utf-8")]
@@ -46,4 +47,6 @@ def upload(
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     if interface.aws_info.get("records_table") is not None:
         redshift_utilities.record_upload(interface, source)
+    if upload_options['cleanup_s3']:
+        interface.cleanup_s3(load_in_parallel)
     return interface
