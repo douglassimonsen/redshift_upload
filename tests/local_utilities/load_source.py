@@ -1,7 +1,7 @@
 import sys
 import pathlib
 import pandas
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
+sys.path.insert(0, str(pathlib.Path(__file__).parents[2]) + '/redshift_upload')
 import local_utilities
 import base_utilities
 import pytest  # noqa
