@@ -192,6 +192,9 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws
     if upload_options['distkey'] or upload_options['sortkey']:
         upload_options['diststyle'] = 'key'
 
+    if not isinstance(upload_options['load_in_parallel'], int):
+        raise ValueError("The option load_in_parallel must be an integer")
+
     if not schema_name or not table_name:
         raise ValueError("You need to define the name of the table you want to load to")
 

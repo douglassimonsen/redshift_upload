@@ -24,3 +24,4 @@ The uploader goes through the following steps:
 19) Properly log things
 --20) split functionality into multiple files
 --21) Create a blank aws_creds.json to explain how it should look
+22) Add ability to clean up s3 files

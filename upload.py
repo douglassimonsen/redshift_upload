@@ -3,6 +3,7 @@ import local_utilities
 import redshift_utilities
 import constants
 from typing import Dict, List
+import numpy
 
 
 def upload(
@@ -33,7 +34,13 @@ def upload(
     if upload_options['drop_table'] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    interface.load_to_s3(source.to_csv(None, index=False, header=False, encoding="utf-8"))
+    if upload_options['load_in_parallel'] > 1:
+        chunks = numpy.arange(source.shape[0]) // upload_options['load_in_parallel']
+        sources = [chunk.to_csv(None, index=False, header=False, encoding="utf-8") for _, chunk in source.groupby(chunks)]
+    else:
+        sources = [source.to_csv(None, index=False, header=False, encoding="utf-8")]
+    interface.load_to_s3(sources)
+
     redshift_utilities.s3_to_redshift(interface, column_types, upload_options)
     if interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])

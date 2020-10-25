@@ -19,6 +19,7 @@ UPLOAD_DEFAULTS = {
     "diststyle": "even",
     "distkey": None,
     "sortkey": None,
+    "load_in_parallel": 1,  # count of parallel files
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"

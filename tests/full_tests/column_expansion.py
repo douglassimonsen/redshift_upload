@@ -25,5 +25,5 @@ def test_column_expansion():
         schema_name="sb_pm",
         table_name="unit_test_column_expansion",
         upload_options={"drop_table": False},
-        aws_info=aws_creds
+        aws_info=aws_creds,
     )

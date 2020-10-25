@@ -60,6 +60,3 @@ def test_full(df):
     with interface.get_db_conn() as conn:
         df_out = pandas.read_sql(f"select * from {interface.full_table_name}_view2 order by order_col", conn)
     assert df.equals(df_out) or (df == df_out).all().iat[0]
-
-
-test_full(df_int)

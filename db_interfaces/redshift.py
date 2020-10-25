@@ -121,23 +121,26 @@ class Interface:
     def get_remote_cols(self):
         return pandas.read_sql(remote_cols_query, self.get_db_conn(), params={'table_name': self.table_name})['attname'].to_list()
 
-    def load_to_s3(self, source_df):
+    def load_to_s3(self, source_dfs):
         self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
-        obj = self.get_s3_conn().Object(self.aws_info['bucket'], self.s3_name)
-        obj.delete()
-        obj.wait_until_not_exists()
 
-        try:
-            response = obj.put(Body=source_df)
-        except botocore.exceptions.ClientError as e:
-            if "(SignatureDoesNotMatch)" in str(e):
-                raise ValueError("The error below occurred when the S3 credentials expire. As Data Analytics to distribute new ones")
-            raise BaseException
+        for i, source_df in enumerate(source_dfs):
+            s3_name = self.s3_name + str(i)
+            obj = self.get_s3_conn().Object(self.aws_info['bucket'], s3_name)
+            obj.delete()
+            obj.wait_until_not_exists()
 
-        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
-            raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
+            try:
+                response = obj.put(Body=source_df)
+            except botocore.exceptions.ClientError as e:
+                if "(SignatureDoesNotMatch)" in str(e):
+                    raise ValueError("The error below occurred when the S3 credentials expire")
+                raise BaseException
 
-        obj.wait_until_exists()
+            if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+                raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
+
+            obj.wait_until_exists()
 
     def get_exclusive_lock(self):
         conn = self.get_db_conn()
