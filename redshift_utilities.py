@@ -26,7 +26,7 @@ def log_dependent_views(interface: redshift.Interface):
             log_query(view_metadata)
 
 
-def get_defined_columns(source: pandas.DataFrame, columns: Dict, interface: redshift.Interface, upload_options: Dict):
+def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_options: Dict):
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):

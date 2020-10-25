@@ -24,7 +24,7 @@ def upload(
     interface = redshift.Interface(schema_name, table_name, aws_info)
     source = local_utilities.load_source(source, source_args, source_kwargs)
 
-    column_types = redshift_utilities.get_defined_columns(source, column_types, interface, upload_options)
+    column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
     source, column_types = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
 
     if not upload_options['drop_table'] and interface.table_exists:
