@@ -208,7 +208,7 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws
         raise ValueError("You must only choose one. It doesn't make sense to do both")
 
     for c in ["redshift_username", "redshift_password", "access_key", "secret_key", "bucket", "host", "dbname", "port"]:
-        if aws_info.get(c) is None:
+        if not aws_info.get(c):  # can't be null or empty strings
             raise ValueError(f"You need to define {c} in the aws_info dictionary")
 
     return upload_options, aws_info
