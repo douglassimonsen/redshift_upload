@@ -100,6 +100,8 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
     views = {}
     base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
     with base_utilities.change_directory():
+        if not os.path.exists(base_path):  # no views to reinstate
+            return
         possible_views = [os.path.join(base_path, view) for view in os.listdir(base_path) if view.endswith(".txt")]  # stupid thumbs.db ruining my life
         for f in possible_views:
             if datetime.datetime.fromtimestamp(os.path.getmtime(f)) > age_limit:

@@ -3,6 +3,7 @@ from typing import List, Dict
 import constants
 import numpy
 import logging
+import re
 from db_interfaces import redshift
 log = logging.getLogger("redshift_utilities")
 
@@ -185,9 +186,12 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
     return df, dict(zip(df.columns, types))
 
 
-def check_coherence(upload_options: Dict, aws_info: Dict):
+def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict):
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
+
+    if not schema_name or not table_name:
+        raise ValueError("You need to define the name of the table you want to load to")
 
     if upload_options['truncate_table'] is True and upload_options['drop_table'] is True:
         raise ValueError("You must only choose one. It doesn't make sense to do both")

@@ -33,17 +33,20 @@ bad_upload_options = {
 
 
 @pytest.mark.parametrize(
-    "upload_options,aws_info,is_good",
+    "schema_name,table_name,upload_options,aws_info,is_good",
     [
-        (good_upload_options, good_credentials, True),
-        (good_upload_options, bad_credentials, False),
-        (bad_upload_options, good_credentials, False),
-        (bad_upload_options, bad_credentials, False),
+        ("a", "b", good_upload_options, good_credentials, True),
+        ("a", "b", good_upload_options, bad_credentials, False),
+        ("a", "b", bad_upload_options, good_credentials, False),
+        ("a", "b", bad_upload_options, bad_credentials, False),
+        ("a", "", good_upload_options, good_credentials, False),
+        ("a", None, good_upload_options, good_credentials, False),
+
     ],
 )
-def test_check_coherence(upload_options, aws_info, is_good):
+def test_check_coherence(schema_name, table_name, upload_options, aws_info, is_good):
     if is_good:
-        local_utilities.check_coherence(upload_options, aws_info)
+        local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)
     else:
         with pytest.raises(ValueError):
-            local_utilities.check_coherence(upload_options, aws_info)
+            local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)

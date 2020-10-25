@@ -19,7 +19,7 @@ def upload(
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
-    upload_options, aws_info = local_utilities.check_coherence(upload_options, aws_info)
+    upload_options, aws_info = local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)
 
     interface = redshift.Interface(schema_name, table_name, aws_info)
     source = local_utilities.load_source(source, source_args, source_kwargs)
