@@ -95,9 +95,6 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
     conn.commit()
 
-    if upload_options['cleanup_s3']:
-        interface.delete_s3_object()
-
 
 def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List):
     def gen_order(views: Dict):
