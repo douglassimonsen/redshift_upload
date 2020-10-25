@@ -1,5 +1,7 @@
 import numpy
 import re
+from typing import Dict, List, Union
+import pandas
 
 
 NaT = numpy.datetime64("NaT")
@@ -19,3 +21,4 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"
 MAX_COLUMN_LENGTH = 63
 varchar_len_re = re.compile(r"\((\d+)\)")
+SourceOptions = Union[str, pandas.DataFrame, List[Dict]]

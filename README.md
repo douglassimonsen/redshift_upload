@@ -21,3 +21,5 @@ The uploader goes through the following steps:
 --16) Stop dependence on constants.py file
 17) Optionally specify diststyle, distkey, sortkey, backup no
 18) Allow you to specify multiple files if you specify all column types
+19) Properly log things
+--20) split functionality into multiple files
