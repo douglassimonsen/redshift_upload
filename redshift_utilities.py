@@ -26,6 +26,21 @@ def log_dependent_views(interface: redshift.Interface):
             log_query(view_metadata)
 
 
+def get_defined_columns(source: pandas.DataFrame, columns: Dict, interface: redshift.Interface, upload_options: Dict):
+    def convert_column_type_structure(columns):
+        for col, typ in columns.items():
+            if not isinstance(typ, dict):
+                columns[col] = {"type": typ}
+        return columns
+
+    columns = convert_column_type_structure(columns)
+    if upload_options['drop_table'] is False:
+        existing_columns = interface.get_columns()
+    else:
+        existing_columns = {}
+    return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
+
+
 def compare_with_remote(source_df: pandas.DataFrame, interface: redshift.Interface):
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)

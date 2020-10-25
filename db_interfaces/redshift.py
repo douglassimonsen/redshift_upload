@@ -3,11 +3,16 @@ import pandas
 import boto3
 import botocore
 import datetime
+if __name__ == '__main__':
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import base_utilities
 
-dependent_view_query = open('db_interfaces/redshift_queries/dependent_views.sql', 'r').read()
-remote_cols_query = open('db_interfaces/redshift_queries/remote_cols.sql', 'r').read()
-competing_conns_query = open('db_interfaces/redshift_queries/kill_connections.sql', 'r').read()
-copy_table_query = open('db_interfaces/redshift_queries/copy_table.sql', 'r').read()
+with base_utilities.change_directory():
+    dependent_view_query = open('redshift_queries/dependent_views.sql', 'r').read()
+    remote_cols_query = open('redshift_queries/remote_cols.sql', 'r').read()
+    competing_conns_query = open('redshift_queries/kill_connections.sql', 'r').read()
+    copy_table_query = open('redshift_queries/copy_table.sql', 'r').read()
 
 
 class Interface:

@@ -185,21 +185,6 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
     return df, dict(zip(df.columns, types))
 
 
-def get_defined_columns(source: pandas.DataFrame, columns: Dict, interface: redshift.Interface, upload_options: Dict):
-    def convert_column_type_structure(columns):
-        for col, typ in columns.items():
-            if not isinstance(typ, dict):
-                columns[col] = {"type": typ}
-        return columns
-
-    columns = convert_column_type_structure(columns)
-    if upload_options['drop_table'] is False:
-        existing_columns = interface.get_columns()
-    else:
-        existing_columns = {}
-    return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
-
-
 def check_coherence(upload_options: Dict, aws_info: Dict):
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
