@@ -7,7 +7,10 @@ import logging
 if __name__ == '__main__':
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import base_utilities
+try:
+    import base_utilities
+except ModuleNotFoundError:
+    from .. import base_utilities
 log = logging.getLogger("redshift_utilities")
 
 with base_utilities.change_directory():

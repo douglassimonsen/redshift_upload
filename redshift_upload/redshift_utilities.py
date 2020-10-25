@@ -1,5 +1,4 @@
 import json
-import base_utilities
 import os
 import pandas
 import toposort
@@ -7,7 +6,12 @@ import datetime
 import psycopg2
 import getpass
 from typing import Dict, List
-from db_interfaces import redshift
+try:
+    import base_utilities
+    from db_interfaces import redshift
+except ModuleNotFoundError:
+    from . import base_utilities
+    from .db_interfaces import redshift
 
 
 def log_dependent_views(interface: redshift.Interface):

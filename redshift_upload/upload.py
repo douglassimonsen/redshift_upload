@@ -1,7 +1,13 @@
-from db_interfaces import redshift
-import local_utilities
-import redshift_utilities
-import constants
+try:
+    from db_interfaces import redshift
+    import local_utilities
+    import redshift_utilities
+    import constants
+except ModuleNotFoundError:
+    from .db_interfaces import redshift
+    from . import local_utilities
+    from . import redshift_utilities
+    from . import constants
 from typing import Dict, List
 import numpy
 

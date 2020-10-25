@@ -1,10 +1,14 @@
 import pandas
 from typing import List, Dict
-import constants
 import numpy
 import logging
 import re
-from db_interfaces import redshift
+try:
+    import constants
+    from db_interfaces import redshift
+except ModuleNotFoundError:
+    from . import constants
+    from .db_interfaces import redshift
 log = logging.getLogger("redshift_utilities")
 
 
