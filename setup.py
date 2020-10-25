@@ -2,9 +2,9 @@ import setuptools
 
 
 setuptools.setup(
-    name="redshift_upload",
+    name="simple_redshift_upload",
     packages=['redshift_upload'],
-    version="1.0.0",
+    version="1.0.1",
     description="A package that simplifies uploading data to redshift",
     url="https://github.com/mwhamilton/redshift_upload",
     download_url="https://github.com/mwhamilton/redshift_upload/archive/1.0.0.tar.gz",
@@ -19,7 +19,6 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "boto3",
-        "getpass",
         "pandas",
         "psycopg2",
         "toposort",
