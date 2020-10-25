@@ -113,24 +113,25 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
 
     conn = interface.get_db_conn()
     cursor = conn.cursor()
-    for view_name in reload_order:
-        view = views[view_name]
-        try:
-            if drop_table is True:
-                cursor.execute(view["text"])
-                if grant_access:
-                    cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
-            elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
-                pass
-            else:  # only get here when complete_refresh is False and view_type is materialized view
-                cursor.execute(f"refresh materialized view {view['view_name']}")
-                cursor.close()
-            conn.commit()
-            os.remove(os.path.join(base_path, view["view_name"]) + ".txt")
-        except psycopg2.ProgrammingError as e:  # if the type of column changed, a view can disapper.
-            conn.rollback()
-            print(f"We were unable to load view: {view_name}")
-            print(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
+    with base_utilities.change_directory():
+        for view_name in reload_order:
+            view = views[view_name]
+            try:
+                if drop_table is True:
+                    cursor.execute(view["text"])
+                    if grant_access:
+                        cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
+                elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
+                    pass
+                else:  # only get here when complete_refresh is False and view_type is materialized view
+                    cursor.execute(f"refresh materialized view {view['view_name']}")
+                    cursor.close()
+                conn.commit()
+                os.remove(f'{base_path}/{view["view_name"]}' + ".txt")
+            except psycopg2.ProgrammingError as e:  # if the type of column changed, a view can disapper.
+                conn.rollback()
+                print(f"We were unable to load view: {view_name}")
+                print(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
 def record_upload(interface: redshift.Interface, source: pandas.DataFrame):

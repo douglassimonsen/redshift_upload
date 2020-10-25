@@ -39,3 +39,4 @@ def upload(
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     if interface.aws_info.get("records_table") is not None:
         redshift_utilities.record_upload(interface, source)
+    return interface
