@@ -1,4 +1,4 @@
 *.csv
 *.pyc
-test.py
+/test.py
 tests/aws_creds.json

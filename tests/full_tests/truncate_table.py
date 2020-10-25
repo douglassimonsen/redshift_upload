@@ -37,7 +37,7 @@ def test_full(df):
     upload.upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
-        table_name="unit_test_simple_upload_complete_soft_refresh",
+        table_name="unit_test_simple_upload_truncate_table",
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )

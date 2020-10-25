@@ -131,7 +131,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
             except:
                 pass
 
-        string_length = min(65535, col.astype(str).str.encode("utf-8").str.len().max())  # necessary to handle emojis, since len('Aݔ') is 2, but it contains 3 bytes which is what Redshift cares about
+        string_length = max(1, min(65535, col.astype(str).str.encode("utf-8").str.len().max()))  # necessary to handle emojis, since len('Aݔ') is 2, but it contains 3 bytes which is what Redshift cares about
         return f"varchar({string_length})", to_string(col)
 
     def cast(col: pandas.Series, col_type: str):

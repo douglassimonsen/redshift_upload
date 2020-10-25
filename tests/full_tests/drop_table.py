@@ -39,7 +39,7 @@ def test_full(df):
     interface = upload.upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
-        table_name="unit_test_simple_upload_complete_refresh",
+        table_name="unit_test_simple_upload_drop_table",
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
