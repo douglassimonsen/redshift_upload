@@ -1,0 +1,10 @@
+{
+    "redshift_username": "",
+    "redshift_password": "",
+    "access_key": "",
+    "secret_key": "",
+    "bucket": "",
+    "host": "",
+    "dbname": "",
+    "port": ""
+}
