@@ -90,6 +90,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
     interface.copy_table(cursor)
 
+    # we can't ensure the grant permissions have changed, so we always do it in case
     if upload_options['grant_access']:
         grant_access()
 
@@ -98,7 +99,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
 def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List):
     def gen_order(views: Dict):
-        base_table = set([interface.full_table_name])
+        base_table = {interface.full_table_name}
         dependencies = {}
         for view in views.values():
             dependencies[view['view_name']] = set(view['dependencies']) - base_table

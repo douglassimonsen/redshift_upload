@@ -1,4 +1,5 @@
 import psycopg2
+import psycopg2.sql
 import pandas
 import boto3
 import botocore
@@ -8,9 +9,9 @@ if __name__ == '__main__':
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
-    import base_utilities
+    import base_utilities, constants
 except ModuleNotFoundError:
-    from .. import base_utilities
+    from .. import base_utilities, constants
 log = logging.getLogger("redshift_utilities")
 
 with base_utilities.change_directory():
@@ -23,13 +24,18 @@ with base_utilities.change_directory():
 class Interface:
     def __init__(self, schema_name, table_name, aws_info):
         self.name = 'redshift'
+        self.aws_info = aws_info
         self.schema_name = schema_name
         self.table_name = table_name
-        self.full_table_name = f"{schema_name}.{table_name}"
-        self.aws_info = aws_info
 
         self._db_conn = None
         self._s3_conn = None
+
+        cursor = self.get_db_conn().cursor()
+        protected_schema_name = psycopg2.sql.Identifier(schema_name).as_string(cursor)
+        protected_table_name = psycopg2.sql.Identifier(table_name).as_string(cursor)
+        self.full_table_name = f"{protected_schema_name}.{protected_table_name}"
+
         self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
 
     def get_db_conn(self):
@@ -201,7 +207,7 @@ class Interface:
         cursor.execute(query)
 
     def expand_varchar_column(self, colname, max_str_len):
-        if max_str_len > 65535:  # max limit in Redshift, as of 2020/03/27, but probably forever
+        if max_str_len > constants.MAX_VARCHAR_LENGTH:
             return False
 
         query = f"""
