@@ -13,6 +13,8 @@ try:
 except ModuleNotFoundError:
     from . import base_utilities
     from .db_interfaces import redshift
+import logging
+log = logging.getLogger("redshift_utilities")
 
 
 def log_dependent_views(interface: redshift.Interface):
@@ -25,6 +27,7 @@ def log_dependent_views(interface: redshift.Interface):
         with open(f"{base_file}.txt", "w") as f:
             json.dump(metadata, f)
 
+    log.info("Logging any dependent views")
     dependent_views = interface.get_dependent_views()
     with base_utilities.change_directory():
         for view_metadata in dependent_views:
@@ -47,6 +50,7 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
 
 
 def compare_with_remote(source_df: pandas.DataFrame, interface: redshift.Interface):
+    log.info("Getting column types from the existing Redshift table")
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)
     local_cols = set(source_df.columns.to_list())
@@ -61,16 +65,18 @@ def compare_with_remote(source_df: pandas.DataFrame, interface: redshift.Interfa
 
 def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict):
     def delete_table():
+        log.info("Dropping Redshift table")
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
 
     def truncate_table():
+        log.info("Truncating Redshift table")
         cursor.execute(f'truncate {interface.full_table_name}')
 
     def create_table():
         def get_col(col_name, col_type):
             base = psycopg2.sql.SQL("").join([
                 psycopg2.sql.Identifier(col_name),
-            ]).as_string(cursor)
+            ]).as_string(cursor)  # for some reason, this is the only way to get 'a b' -> '"a b"'
             base += f' {col_type}'
             for opt in ['distkey', 'sortkey']:
                 if upload_options[opt] == col_name:
@@ -78,10 +84,12 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
             return base
 
         columns = ', '.join(get_col(col_name, col_type) for col_name, col_type in column_types.items())
+        log.info("Creating Redshift table")
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 
     def grant_access():
         grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
+        log.info("Granting permissions on Redshift table")
         cursor.execute(grant)
 
     conn, cursor = interface.get_exclusive_lock()
@@ -112,6 +120,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
     age_limit = datetime.datetime.today() - pandas.Timedelta(hours=4)
     views = {}
     base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
+    log.info("Collecting Redshift views to reinstantiate")
     with base_utilities.change_directory():
         if not os.path.exists(base_path):  # no views to reinstate
             return
@@ -126,6 +135,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
 
     conn = interface.get_db_conn()
     cursor = conn.cursor()
+    log.info("Reinstantiating Redshift views to")
     with base_utilities.change_directory():
         for view_name in reload_order:
             view = views[view_name]
@@ -143,8 +153,8 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                 os.remove(f'{base_path}/{view["view_name"]}' + ".txt")
             except psycopg2.ProgrammingError as e:  # if the type of column changed, a view can disapper.
                 conn.rollback()
-                print(f"We were unable to load view: {view_name}")
-                print(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
+                log.warning(f"We were unable to load view: {view_name}")
+                log.warning(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
 def record_upload(interface: redshift.Interface, source: pandas.DataFrame):
@@ -160,6 +170,7 @@ def record_upload(interface: redshift.Interface, source: pandas.DataFrame):
         'redshift_user': interface.aws_info['redshift_username'],
         'os_user': getpass.getuser(),  # I recognize it's not great, but hopefully no one running this is malicious. https://stackoverflow.com/a/842096/6465644
     }
+    log.info("Recording Redshift Upload")
     conn = interface.get_db_conn()
     cursor = conn.cursor()
     cursor.execute(query, data)

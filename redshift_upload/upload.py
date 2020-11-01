@@ -10,6 +10,9 @@ except ModuleNotFoundError:
     from . import constants
 from typing import Dict, List
 import numpy
+import logging
+import time
+log = logging.getLogger("redshift_utilities")
 
 
 def upload(
@@ -22,11 +25,17 @@ def upload(
     upload_options: Dict=None,
     aws_info: Dict=None,
 ):
-
+    start_time = time.time()
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
     upload_options, aws_info = local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)
+
+    if upload_options['default_logging']:
+        local_utilities.initialize_logger()
+
+    log.info("=" * 20)
+    log.info(f"Beginning to upload table: {schema_name}.{table_name}")
 
     interface = redshift.Interface(schema_name, table_name, aws_info)
     source = local_utilities.load_source(source, source_args, source_kwargs)
@@ -55,4 +64,5 @@ def upload(
         redshift_utilities.record_upload(interface, source)
     if upload_options['cleanup_s3']:
         interface.cleanup_s3(load_in_parallel)
+    log.info(f"Upload to {interface.full_table_name} finished in {round(time.time() - start_time, 2)} seconds!")
     return interface

@@ -3,6 +3,7 @@ from typing import List, Dict
 import numpy
 import logging
 import re
+import sys
 try:
     import constants
     from db_interfaces import redshift
@@ -10,6 +11,17 @@ except ModuleNotFoundError:
     from . import constants
     from .db_interfaces import redshift
 log = logging.getLogger("redshift_utilities")
+
+
+def initialize_logger():
+    log = logging.getLogger("redshift_utilities")
+    if log.hasHandlers():
+        return
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+    log.setLevel("INFO")
 
 
 def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict):
@@ -162,6 +174,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
             bad_conv[col_type](col)
             raise BaseException
 
+    log.info("Determining proper column types for serialization")
     df.columns = df.columns.astype(str).str.lower()
     df.columns = [clean_column(x, i, df.columns) for i, x in enumerate(df.columns)]
     types = []
@@ -181,10 +194,13 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
         if col_type.startswith("varchar") and interface.table_exists and not drop_table:
             remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))  # type: ignore
             bad_strings = df[colname][df[colname].astype(str).str.len() > remote_varchar_length]
-            bad_strings_formatted = "\n".join(f"{x} <- (length: {len(str(x))}, index: {i})" for x, i in zip(bad_strings, bad_strings.index))
+            bad_strings_formatted = "\n".join(f"{x[:200]} <- (length: {len(str(x))}, index: {i})" for x, i in zip(bad_strings.iloc[:5], bad_strings.iloc[:5].index))
             max_str_len = max(bad_strings.astype(str).str.len(), default=-1)
             if bad_strings.shape[0] > 0:
                 if not interface.expand_varchar_column(colname, max_str_len):
+                    log.error(f"Unable to load data to table: {interface.full_table_name}")
+                    log.error(f'The "{colname}" column had {bad_strings.shape[0]} string(s) longer than the table can support (max length: {max_str_len})')
+                    log.error("These are the first five offending strings:\n" + bad_strings_formatted)
                     raise ValueError("Failed to expand the varchar column enough to accomodate the new data.")
                 else:
                     col_type = re.sub(constants.varchar_len_re, f"({max_str_len})", col_type, count=1)
