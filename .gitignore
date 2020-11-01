@@ -1,6 +1,5 @@
 *.csv
 *.pyc
 /test.py
-tests/aws_creds.json
 simple_redshift_upload.egg-info/*
 *.tar.gz
