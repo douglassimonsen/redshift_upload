@@ -4,6 +4,7 @@ import pandas
 import toposort
 import datetime
 import psycopg2
+import psycopg2.sql
 import getpass
 from typing import Dict, List
 try:
@@ -67,7 +68,10 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
     def create_table():
         def get_col(col_name, col_type):
-            base = f'"{col_name}" {col_type}'
+            base = psycopg2.sql.SQL("").join([
+                psycopg2.sql.Identifier(col_name),
+            ]).as_string(cursor)
+            base += f' {col_type}'
             for opt in ['distkey', 'sortkey']:
                 if upload_options[opt] == col_name:
                     base += f' {opt}'

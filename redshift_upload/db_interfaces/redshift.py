@@ -32,9 +32,10 @@ class Interface:
         self._s3_conn = None
 
         cursor = self.get_db_conn().cursor()
-        protected_schema_name = psycopg2.sql.Identifier(schema_name).as_string(cursor)
-        protected_table_name = psycopg2.sql.Identifier(table_name).as_string(cursor)
-        self.full_table_name = f"{protected_schema_name}.{protected_table_name}"
+        self.full_table_name = psycopg2.sql.SQL('.').join([
+            psycopg2.sql.Identifier(schema_name),
+            psycopg2.sql.Identifier(table_name)
+        ]).as_string(cursor)
 
         self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
 
