@@ -24,6 +24,7 @@ def upload(
     table_name: str=None,
     upload_options: Dict=None,
     aws_info: Dict=None,
+    log_level: str="INFO",
 ):
     start_time = time.time()
     source_args = source_args or []
@@ -32,7 +33,7 @@ def upload(
     upload_options, aws_info = local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)
 
     if upload_options['default_logging']:
-        local_utilities.initialize_logger()
+        local_utilities.initialize_logger(log_level)
 
     log.info("=" * 20)
     log.info(f"Beginning to upload table: {schema_name}.{table_name}")

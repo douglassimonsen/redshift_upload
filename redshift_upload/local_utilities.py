@@ -13,15 +13,15 @@ except ModuleNotFoundError:
 log = logging.getLogger("redshift_utilities")
 
 
-def initialize_logger():
+def initialize_logger(log_level):
     log = logging.getLogger("redshift_utilities")
+    log.setLevel(logging.getLevelName(log_level))
     if log.hasHandlers():
         return
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     log.addHandler(handler)
-    log.setLevel("INFO")
 
 
 def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict):
