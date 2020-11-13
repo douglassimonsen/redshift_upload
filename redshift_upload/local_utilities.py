@@ -4,6 +4,9 @@ import numpy
 import logging
 import re
 import sys
+import io
+import csv
+from collections import defaultdict
 try:
     import constants
     from db_interfaces import redshift
@@ -24,12 +27,51 @@ def initialize_logger(log_level):
     log.addHandler(handler)
 
 
-def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict):
+def chunkify(source, upload_options):
+    def chunk_to_string(chunk):
+        f = io.StringIO()
+        writer = csv.writer(f)
+        writer.writerows(chunk)
+        f.seek(0)
+        return f.read().encode("utf-8")
+
+    if not upload_options['load_as_csv']:
+        load_in_parallel = min(upload_options['load_in_parallel'], source.shape[0])  # cannot have more groups than rows, otherwise it breaks
+        if load_in_parallel > 1:
+            chunks = numpy.arange(source.shape[0]) // load_in_parallel
+            return [chunk.to_csv(None, index=False, header=False, encoding="utf-8") for _, chunk in source.groupby(chunks)], load_in_parallel
+        else:
+            return [source.to_csv(None, index=False, header=False, encoding="utf-8")], load_in_parallel
+    else:
+        rows = list(source)
+        load_in_parallel = min(upload_options['load_in_parallel'], len(rows))  # cannot have more groups than rows, otherwise it breaks
+        chunk_size = len(rows) // load_in_parallel
+        return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
+
+
+def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict):
+    if upload_options['load_as_csv']:
+        if source.endswith(".csv"):
+            log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
+            log.debug("Also, remember to remove headers of the CSVs! The uploader counts everything as a row")
+            with open(source, 'r') as f:
+                return csv.reader(f, *source_args, **source_kwargs)
+        else:
+            if isinstance(source, bytes):
+                source = source.decode("utf-8")
+            return csv.reader(io.StringIO(source), *source_args, **source_kwargs)
+        return source
+
     if isinstance(source, str):
+        if upload_options['skip_source_types']:
+            converters = defaultdict(lambda i: str)
+        else:
+            converters = None
+
         if source.endswith('.xlsx'):
-            return pandas.read_excel(source, *source_args, **source_kwargs)
+            return pandas.read_excel(source, *source_args, **source_kwargs, converters=converters)
         elif source.endswith(".csv"):
-            return pandas.read_csv(source, *source_args, **source_kwargs)
+            return pandas.read_csv(source, *source_args, **source_kwargs, converters=converters)
         else:
             raise ValueError("Your input was invalid")
     elif isinstance(source, pandas.DataFrame):
@@ -214,6 +256,9 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws
     if upload_options['distkey'] or upload_options['sortkey']:
         upload_options['diststyle'] = 'key'
 
+    if upload_options['load_as_csv']:
+        upload_options['skip_checks'] = True
+
     if not isinstance(upload_options['load_in_parallel'], int):
         raise ValueError("The option load_in_parallel must be an integer")
 
@@ -227,4 +272,6 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws
         if not aws_info.get(c):  # can't be null or empty strings
             raise ValueError(f"You need to define {c} in the aws_info dictionary")
 
+    if upload_options['skip_checks'] and upload_options['drop_table']:
+        raise ValueError("If you're dropping the table, you need the checks to determine what column types to use")
     return upload_options, aws_info

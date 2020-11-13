@@ -39,27 +39,27 @@ def upload(
     log.info(f"Beginning to upload table: {schema_name}.{table_name}")
 
     interface = redshift.Interface(schema_name, table_name, aws_info)
-    source = local_utilities.load_source(source, source_args, source_kwargs)
+    if not interface.table_exists and upload_options['skip_checks']:
+        raise ValueError("The table does not yet exist, you need the checks to determine what column types to use")
+    source = local_utilities.load_source(source, source_args, source_kwargs, upload_options)
 
-    column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
-    source, column_types = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
+    if not upload_options['skip_checks']:
+        column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
+        source, column_types = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
 
-    if not upload_options['drop_table'] and interface.table_exists:
-        redshift_utilities.compare_with_remote(source, interface)
+        if not upload_options['drop_table'] and interface.table_exists:
+            redshift_utilities.compare_with_remote(source, interface)
+    else:
+        log.info("Skipping data checks")
 
-    if upload_options['drop_table'] and interface.table_exists:
+    if not upload_options['skip_views'] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    load_in_parallel = min(upload_options['load_in_parallel'], source.shape[0])  # cannot have more groups than rows, otherwise it breaks
-    if load_in_parallel > 1:
-        chunks = numpy.arange(source.shape[0]) // load_in_parallel
-        sources = [chunk.to_csv(None, index=False, header=False, encoding="utf-8") for _, chunk in source.groupby(chunks)]
-    else:
-        sources = [source.to_csv(None, index=False, header=False, encoding="utf-8")]
+    sources, load_in_parallel = local_utilities.chunkify(source, upload_options) 
     interface.load_to_s3(sources)
 
     redshift_utilities.s3_to_redshift(interface, column_types, upload_options)
-    if interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
+    if not upload_options['skip_views'] and interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     if interface.aws_info.get("records_table") is not None:
         redshift_utilities.record_upload(interface, source)
