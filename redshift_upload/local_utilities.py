@@ -6,6 +6,7 @@ import re
 import sys
 import io
 import csv
+import math
 from collections import defaultdict
 try:
     import constants
@@ -45,7 +46,7 @@ def chunkify(source, upload_options):
     else:
         rows = list(source)
         load_in_parallel = min(upload_options['load_in_parallel'], len(rows))  # cannot have more groups than rows, otherwise it breaks
-        chunk_size = len(rows) // load_in_parallel
+        chunk_size = math.ceil(len(rows) / load_in_parallel)
         return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
 
 
