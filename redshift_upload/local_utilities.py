@@ -18,6 +18,9 @@ log = logging.getLogger("redshift_utilities")
 
 
 def initialize_logger(log_level):
+    """
+    Sets up logging for the upload
+    """
     log = logging.getLogger("redshift_utilities")
     log.setLevel(logging.getLevelName(log_level))
     if log.hasHandlers():
@@ -65,7 +68,7 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
 
     if isinstance(source, str):
         if upload_options['skip_source_types']:
-            converters = defaultdict(lambda i: str)
+            converters = defaultdict(lambda _: str)
         else:
             converters = None
 

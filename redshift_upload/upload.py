@@ -9,7 +9,6 @@ except ModuleNotFoundError:
     from . import redshift_utilities
     from . import constants
 from typing import Dict, List
-import numpy
 import logging
 import time
 log = logging.getLogger("redshift_utilities")
@@ -26,6 +25,9 @@ def upload(
     aws_info: Dict=None,
     log_level: str="INFO",
 ):
+    """
+    The main public function for uploading to redshift. Orchestrates the upload from start to finish.
+    """
     start_time = time.time()
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
@@ -55,7 +57,7 @@ def upload(
     if not upload_options['skip_views'] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    sources, load_in_parallel = local_utilities.chunkify(source, upload_options) 
+    sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
     interface.load_to_s3(sources)
 
     redshift_utilities.s3_to_redshift(interface, column_types, upload_options)

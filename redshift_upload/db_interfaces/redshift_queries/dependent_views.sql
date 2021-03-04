@@ -16,4 +16,3 @@ left JOIN pg_views on pg_views.schemaname = dependent_ns.nspname and pg_views.vi
 WHERE source_ns.nspname = %(schema_name)s
 AND source_table.relname = %(table_name)s
 AND pg_attribute.attnum > 0
-ORDER BY 1,2

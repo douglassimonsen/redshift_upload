@@ -77,13 +77,13 @@ class Interface:
                 return "date"
             if "timestamp" in t:
                 return "timestamp"
-            if t == "boolean":
+            if t.startswith("bool"):
                 return "boolean"
             if "int" in t:
                 return "bigint"
             if t == "double precision" or "numeric" in t:
                 return "double precision"
-            return t
+            raise ValueError(f"Unsupported type: {t}")
 
         query = '''
         set search_path to %(schema)s;
@@ -115,7 +115,7 @@ class Interface:
                 }
             )
             final_df = final_df.append(df, ignore_index=True)
-            unsearched_views.extend([f'{row["dependent_schema"]}.{row["dependent_view"]}' for i, row in df.iterrows()])
+            unsearched_views.extend([f'{row["dependent_schema"]}.{row["dependent_view"]}' for _, row in df.iterrows()])
             unsearched_views.pop(0)
 
         try:
@@ -168,7 +168,7 @@ class Interface:
     def get_exclusive_lock(self):
         conn = self.get_db_conn()
         cursor = conn.cursor()
-        if not self.table_exists:  # nothing to lock against,
+        if not self.table_exists:  # nothing to lock against
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
@@ -177,7 +177,7 @@ class Interface:
         for _, row in processes.iterrows():
             try:
                 cursor.execute(f"select pg_terminate_backend('{row['pid']}')")
-            except Exception as exc:
+            except:
                 pass
         conn.commit()
         cursor.execute(f"lock table {self.full_table_name}")
