@@ -92,18 +92,21 @@ class Interface:
         select "column", type from PG_TABLE_DEF
         where tablename = %(table_name)s;
         '''
-        columns = pandas.read_sql(query, self.get_db_conn(), params={'schema': self.schema_name, 'table_name': self.table_name})
-        return {col: {"type": type_mapping(t)} for col, t in zip(columns["column"], columns["type"])}
+        with self.get_db_conn().cursor() as cursor:
+            cursor.execute(query, {'schema': self.schema_name, 'table_name': self.table_name})
+            return {col: {"type": type_mapping(t)} for col, t in cursor.fetchall()}
 
     def get_dependent_views(self):
         def get_view_query(row, dependencies):
             view = row["dependent_schema"] + "." + row["dependent_view"]
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{view}', true) as text"
 
-            df = pandas.read_sql(view_text_query, self.get_db_conn())
-            return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": df.text[0], "view_type": row["dependent_kind"]}
+            with self.get_db_conn().cursor() as cursor:
+                cursor.execute(view_text_query)
+                view_text = cursor.fetchone()[0]
+            return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": view_text, "view_type": row["dependent_kind"]}
 
-        unsearched_views = [self.full_table_name]  # the table is searched, but will not appear in the final_df
+        unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df
         final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
 
         while len(unsearched_views):
@@ -133,7 +136,9 @@ class Interface:
         return [get_view_query(row, dependencies) for i, row in final_df.iterrows()]
 
     def get_remote_cols(self):
-        return pandas.read_sql(remote_cols_query, self.get_db_conn(), params={'table_name': self.table_name})['attname'].to_list()
+        with self.get_db_conn().cursor() as cursor:
+            cursor.execute(remote_cols_query, {'table_name': self.table_name})
+            return [x[0] for x in cursor.fetchall()]
 
     def load_to_s3(self, source_dfs):
         def loader(data):
@@ -176,11 +181,13 @@ class Interface:
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
-        processes = pandas.read_sql(competing_conns_query, conn, params={'table_name': self.table_name})
-        processes = processes[processes["pid"] != conn.get_backend_pid()]
-        for _, row in processes.iterrows():
+        try:
+            processes = set(cursor.fetchall()) - {(conn.get_backend_pid(), self.aws_info['redshift_username'])}  # we don't want to delete the connection we're on!
+        except psycopg2.ProgrammingError:  # no results to fetch
+            processes = set()
+        for process, username in processes:
             try:
-                cursor.execute(f"select pg_terminate_backend('{row['pid']}')")
+                cursor.execute(f"select pg_terminate_backend('{process}')")
             except:
                 pass
         conn.commit()
@@ -195,15 +202,9 @@ class Interface:
         and tablename = %(table_name)s
         '''
         log.info("Checking if the table exists in Redshift")
-        table_count = pandas.read_sql(
-            query,
-            self.get_db_conn(),
-            params={
-                'schema_name': self.schema_name,
-                'table_name': self.table_name
-            }
-        )['cnt'].iat[0]
-        return table_count != 0
+        with self.get_db_conn().cursor() as cursor:
+            cursor.execute(query, {'schema_name': self.schema_name, 'table_name': self.table_name})
+            return cursor.fetchone()[0] != 0
 
     def copy_table(self, cursor):
         log.info("Copying table from S3 to Redshift")
