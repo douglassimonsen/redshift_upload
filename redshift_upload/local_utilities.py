@@ -42,7 +42,8 @@ def chunkify(source, upload_options):
     if not upload_options['load_as_csv']:
         load_in_parallel = min(upload_options['load_in_parallel'], source.shape[0])  # cannot have more groups than rows, otherwise it breaks
         if load_in_parallel > 1:
-            chunks = numpy.arange(source.shape[0]) // load_in_parallel
+            chunk_size = math.ceil(source.shape[0] / load_in_parallel)
+            chunks = numpy.arange(source.shape[0]) // chunk_size
             return [chunk.to_csv(None, index=False, header=False, encoding="utf-8") for _, chunk in source.groupby(chunks)], load_in_parallel
         else:
             return [source.to_csv(None, index=False, header=False, encoding="utf-8")], load_in_parallel

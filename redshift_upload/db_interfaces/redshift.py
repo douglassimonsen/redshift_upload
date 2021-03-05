@@ -5,6 +5,7 @@ import boto3
 import botocore
 import datetime
 import logging
+import multiprocessing.pool
 if __name__ == '__main__':
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,6 +28,7 @@ class Interface:
         self.aws_info = aws_info
         self.schema_name = schema_name
         self.table_name = table_name
+        self.s3_name = f"{schema_name}_{table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
 
         self._db_conn = None
         self._s3_conn = None
@@ -134,10 +136,8 @@ class Interface:
         return pandas.read_sql(remote_cols_query, self.get_db_conn(), params={'table_name': self.table_name})['attname'].to_list()
 
     def load_to_s3(self, source_dfs):
-        self.s3_name = f"{self.schema_name}_{self.table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
-
-        log.info(f"Loading table to S3 in {len(source_dfs)} chunks")
-        for i, source_df in enumerate(source_dfs):
+        def loader(data):
+            i, source_df = data
             s3_name = self.s3_name + str(i)
             obj = self.get_s3_conn().Object(self.aws_info['bucket'], s3_name)
             obj.delete()
@@ -154,6 +154,10 @@ class Interface:
                 raise ValueError(f"Something unusual happened in the upload.\n{str(response)}")
 
             obj.wait_until_exists()
+
+        log.info(f"Loading table to S3 in {len(source_dfs)} chunks")
+        with multiprocessing.pool.ThreadPool(processes=min(len(source_dfs), constants.MAX_THREAD_COUNT)) as pool:
+            pool.map(loader, enumerate(source_dfs))
 
     def cleanup_s3(self, parallel_loads: int):
         for i in range(parallel_loads):
