@@ -49,14 +49,14 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def compare_with_remote(source_df: pandas.DataFrame, interface: redshift.Interface):
+def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interface: redshift.Interface):
     log.info("Getting column types from the existing Redshift table")
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)
     local_cols = set(source_df.columns.to_list())
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
-        missing_cols = ', '.join(local_cols.difference(remote_cols_set))
-        raise ValueError(f"Haven't implemented adding new columns to the remote table yet. Bad columns are \"{missing_cols}\". Failing now")
+        log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {column_types[col]} default null;" for col in local_cols.difference(remote_cols_set)))
+        raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
     else:
         for col in remote_cols_set.difference(local_cols):
             source_df[col] = None
@@ -94,10 +94,10 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
     conn, cursor = interface.get_exclusive_lock()
 
-    if upload_options['drop_table']:
+    if upload_options['drop_table'] or not interface.table_exists:
         delete_table()
         create_table()
-    if upload_options['truncate_table']:
+    elif upload_options['truncate_table']:  # we're not going to truncate if the table doesn't exist yet
         truncate_table()
 
     interface.copy_table(cursor)
