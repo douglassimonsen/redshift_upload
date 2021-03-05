@@ -2,6 +2,9 @@ import numpy
 import re
 from typing import Dict, List, Union
 import pandas
+import csv
+from mypy_boto3_s3 import Client
+from psycopg2.extensions import connection
 
 
 NaT = numpy.datetime64("NaT")
@@ -32,4 +35,5 @@ MAX_COLUMN_LENGTH = 63
 MAX_THREAD_COUNT = 10
 MAX_VARCHAR_LENGTH = 65535  # max limit in Redshift, as of 2020/03/27, but probably forever
 varchar_len_re = re.compile(r"\((\d+)\)")
-SourceOptions = Union[str, pandas.DataFrame, List[Dict]]
+SourceOptions = Union[str, pandas.DataFrame, List[Dict], csv.writer]
+Connection = Union[Client, connection]

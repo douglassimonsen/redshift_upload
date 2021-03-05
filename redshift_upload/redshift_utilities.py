@@ -17,7 +17,7 @@ import logging
 log = logging.getLogger("redshift_utilities")
 
 
-def log_dependent_views(interface: redshift.Interface):
+def log_dependent_views(interface: redshift.Interface) -> None:
     def log_query(metadata: Dict):
         metadata["text"] = f"set search_path = '{interface.schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
         base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
@@ -34,7 +34,7 @@ def log_dependent_views(interface: redshift.Interface):
             log_query(view_metadata)
 
 
-def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_options: Dict):
+def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_options: Dict) -> Dict[str, Dict[str, str]]:
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):
@@ -49,7 +49,7 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interface: redshift.Interface):
+def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interface: redshift.Interface) -> pandas.DataFrame:
     log.info("Getting column types from the existing Redshift table")
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)
@@ -60,10 +60,10 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
     else:
         for col in remote_cols_set.difference(local_cols):
             source_df[col] = None
-    source_df = source_df[remote_cols]
+    return source_df[remote_cols]
 
 
-def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict):
+def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict) -> None:
     def delete_table():
         log.info("Dropping Redshift table")
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
@@ -109,7 +109,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
     conn.commit()
 
 
-def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List):
+def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List) -> None:
     def gen_order(views: Dict):
         base_table = {f"{interface.schema_name}.{interface.table_name}"}
         dependencies = {}
@@ -157,7 +157,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                 log.warning(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
-def record_upload(interface: redshift.Interface, source: pandas.DataFrame):
+def record_upload(interface: redshift.Interface, source: pandas.DataFrame) -> None:
     query = f'''
     insert into {interface.aws_info['records_table']}
            (  table_name,     upload_time,     rows,     redshift_user,     os_user)

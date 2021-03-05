@@ -5,6 +5,7 @@ import botocore
 import datetime
 import logging
 import multiprocessing.pool
+from typing import Dict, List, Tuple
 if __name__ == '__main__':
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,7 +23,7 @@ with base_utilities.change_directory():
 
 
 class Interface:
-    def __init__(self, schema_name, table_name, aws_info):
+    def __init__(self, schema_name, table_name, aws_info) -> None:
         self.name = 'redshift'
         self.aws_info = aws_info
         self.schema_name = schema_name
@@ -40,7 +41,7 @@ class Interface:
 
         self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
 
-    def get_db_conn(self):
+    def get_db_conn(self) -> constants.Connection:
         if self._db_conn is None:
             self._db_conn = psycopg2.connect(
                 host=self.aws_info['host'],
@@ -52,7 +53,7 @@ class Interface:
             )
         return self._db_conn
 
-    def get_s3_conn(self):
+    def get_s3_conn(self) -> constants.Connection:
         if self._s3_conn is None:
             self._s3_conn = boto3.resource(
                 "s3",
@@ -63,8 +64,8 @@ class Interface:
             )
         return self._s3_conn
 
-    def get_columns(self):
-        def type_mapping(t):
+    def get_columns(self) -> Dict[str, Dict[str, str]]:
+        def type_mapping(t) -> str:
             """
             basing off of https://www.flydata.com/blog/redshift-supported-data-types/
             """
@@ -95,8 +96,8 @@ class Interface:
             cursor.execute(query, {'schema': self.schema_name, 'table_name': self.table_name})
             return {col: {"type": type_mapping(t)} for col, t in cursor.fetchall()}
 
-    def get_dependent_views(self):
-        def get_view_query(row):
+    def get_dependent_views(self) -> List[Dict]:
+        def get_view_query(row) -> Dict:
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{row['full_name']}', true) as text"
 
             with self.get_db_conn().cursor() as cursor:
@@ -110,7 +111,7 @@ class Interface:
                 "view_type": row["dependent_kind"]
             }
 
-        def format_row(row):
+        def format_row(row) -> Dict:
             # columns = ['dependent_schema', 'dependent_view', 'dependent_kind', 'viewowner', 'nspname', 'relname']
             return {
                 'full_name': f"{row[0]}.{row[1]}",
@@ -136,13 +137,13 @@ class Interface:
             dependency_relations.setdefault(row['full_name'], []).append(row['dependency'])
         return [get_view_query(row) for row in dependencies]
 
-    def get_remote_cols(self):
+    def get_remote_cols(self) -> List[str]:
         with self.get_db_conn().cursor() as cursor:
             cursor.execute(remote_cols_query, {'table_name': self.table_name})
             return [x[0] for x in cursor.fetchall()]
 
-    def load_to_s3(self, source_dfs):
-        def loader(data):
+    def load_to_s3(self, source_dfs) -> None:
+        def loader(data) -> None:
             i, source_df = data
             s3_name = self.s3_name + str(i)
             obj = self.get_s3_conn().Object(self.aws_info['bucket'], s3_name)
@@ -165,7 +166,7 @@ class Interface:
         with multiprocessing.pool.ThreadPool(processes=min(len(source_dfs), constants.MAX_THREAD_COUNT)) as pool:
             pool.map(loader, enumerate(source_dfs))
 
-    def cleanup_s3(self, parallel_loads: int):
+    def cleanup_s3(self, parallel_loads: int) -> None:
         for i in range(parallel_loads):
             obj = self.s3_conn.Object(self.aws_info['bucket'], self.s3_name + str(i))
             try:
@@ -175,7 +176,7 @@ class Interface:
                 log.error("Attempting to Overwrite with empty string to minimze storage use")
                 obj.put(Body=b"")
 
-    def get_exclusive_lock(self):
+    def get_exclusive_lock(self) -> Tuple[constants.Connection, constants.Connection]:
         conn = self.get_db_conn()
         cursor = conn.cursor()
         if not self.table_exists:  # nothing to lock against
@@ -195,7 +196,7 @@ class Interface:
         cursor.execute(f"lock table {self.full_table_name}")
         return conn, cursor
 
-    def check_table_exists(self):
+    def check_table_exists(self) -> bool:
         query = '''
         select count(*) as cnt
         from pg_tables
@@ -207,7 +208,7 @@ class Interface:
             cursor.execute(query, {'schema_name': self.schema_name, 'table_name': self.table_name})
             return cursor.fetchone()[0] != 0
 
-    def copy_table(self, cursor):
+    def copy_table(self, cursor) -> None:
         log.info("Copying table from S3 to Redshift")
         query = copy_table_query.format(
             file_destination=self.full_table_name,
@@ -217,7 +218,7 @@ class Interface:
         )
         cursor.execute(query)
 
-    def expand_varchar_column(self, colname, max_str_len):
+    def expand_varchar_column(self, colname, max_str_len) -> bool:
         if max_str_len > constants.MAX_VARCHAR_LENGTH:
             return False
 

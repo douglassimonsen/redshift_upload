@@ -1,5 +1,5 @@
 import pandas
-from typing import List, Dict
+from typing import List, Dict, Union, Tuple
 import numpy
 import logging
 import re
@@ -7,7 +7,6 @@ import sys
 import io
 import csv
 import math
-from collections import defaultdict
 try:
     import constants
     from db_interfaces import redshift
@@ -17,7 +16,7 @@ except ModuleNotFoundError:
 log = logging.getLogger("redshift_utilities")
 
 
-def initialize_logger(log_level):
+def initialize_logger(log_level) -> None:
     """
     Sets up logging for the upload
     """
@@ -31,7 +30,7 @@ def initialize_logger(log_level):
     log.addHandler(handler)
 
 
-def chunkify(source, upload_options):
+def chunkify(source, upload_options) -> List[str]:
     def chunk_to_string(chunk):
         f = io.StringIO()
         writer = csv.writer(f)
@@ -56,7 +55,7 @@ def chunkify(source, upload_options):
         return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
 
 
-def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict):
+def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict) -> Union[pandas.DataFrame, csv.reader]:
     if upload_options['load_as_csv']:
         if isinstance(source, csv.reader):
             return source
@@ -82,7 +81,7 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
         raise ValueError("We do not support this type of source")
 
 
-def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool):  # check what happens ot the dic over multiple uses
+def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool) -> Tuple[pandas.DataFrame, Dict]:  # check what happens ot the dic over multiple uses
     def to_bool(col: pandas.Series):
         assert col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").isin(["true", "false", "nan"]).all()  # Nones get turned into nans and nans get stringified
         return col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").apply(lambda x: str(x == "true") if x != "nan" else "")  # null is blank because the copy command defines it that way
@@ -246,7 +245,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
     return df, dict(zip(df.columns, types))
 
 
-def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict):
+def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
     if upload_options['distkey'] or upload_options['sortkey']:

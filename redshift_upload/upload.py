@@ -25,7 +25,7 @@ def upload(
     aws_info: Dict=None,
     log_level: str="INFO",
     interface: redshift.Interface=None
-):
+) -> redshift.Interface:
     """
     The main public function for uploading to redshift. Orchestrates the upload from start to finish.
     """
@@ -51,7 +51,7 @@ def upload(
         source, column_types = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
 
         if not upload_options['drop_table'] and interface.table_exists:
-            redshift_utilities.compare_with_remote(source, column_types, interface)
+            source = redshift_utilities.compare_with_remote(source, column_types, interface)
     else:
         log.info("Skipping data checks")
 

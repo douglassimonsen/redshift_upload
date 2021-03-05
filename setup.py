@@ -19,6 +19,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         "boto3",
+        "boto3-stubs[s3]",
         "pandas",
         "psycopg2",
         "toposort",
