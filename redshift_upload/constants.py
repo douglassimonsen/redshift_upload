@@ -17,7 +17,7 @@ DTYPE_MAPS = {
 UPLOAD_DEFAULTS = {
     "truncate_table": False,
     "drop_table": False,
-    "cleanup_s3": False,
+    "cleanup_s3": True,
     "grant_access": [],
     "diststyle": "even",
     "distkey": None,

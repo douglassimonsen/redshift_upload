@@ -168,7 +168,7 @@ class Interface:
 
     def cleanup_s3(self, parallel_loads: int) -> None:
         for i in range(parallel_loads):
-            obj = self.s3_conn.Object(self.aws_info['bucket'], self.s3_name + str(i))
+            obj = self.get_s3_conn().Object(self.aws_info['bucket'], self.s3_name + str(i))
             try:
                 obj.delete()
             except Exception as e:
