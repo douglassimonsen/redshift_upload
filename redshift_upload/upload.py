@@ -24,6 +24,7 @@ def upload(
     upload_options: Dict=None,
     aws_info: Dict=None,
     log_level: str="INFO",
+    interface: redshift.Interface=None
 ):
     """
     The main public function for uploading to redshift. Orchestrates the upload from start to finish.
@@ -40,7 +41,7 @@ def upload(
     log.info("=" * 20)
     log.info(f"Beginning to upload table: {schema_name}.{table_name}")
 
-    interface = redshift.Interface(schema_name, table_name, aws_info)
+    interface = interface or redshift.Interface(schema_name, table_name, aws_info)
     if not interface.table_exists and upload_options['skip_checks']:
         raise ValueError("The table does not yet exist, you need the checks to determine what column types to use")
     source = local_utilities.load_source(source, source_args, source_kwargs, upload_options)
