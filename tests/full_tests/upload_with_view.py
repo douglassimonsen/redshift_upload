@@ -45,10 +45,9 @@ def test_full(df):
 
     with interface.get_db_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute(f"create or replace view {interface.full_table_name}_view as select * from {interface.full_table_name}")
-        cursor.execute(f"create or replace view {interface.full_table_name}_view2 as select * from {interface.full_table_name}_view")
+        cursor.execute(f"create or replace view {interface.schema_name}.{interface.table_name}_view as select * from {interface.schema_name}.{interface.table_name}")
+        cursor.execute(f"create or replace view {interface.schema_name}.{interface.table_name}_view2 as select * from {interface.schema_name}.{interface.table_name}_view")
         conn.commit()
-
     interface = upload.upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
@@ -58,5 +57,8 @@ def test_full(df):
     )
 
     with interface.get_db_conn() as conn:
-        df_out = pandas.read_sql(f"select * from {interface.full_table_name}_view2 order by order_col", conn)
+        df_out = pandas.read_sql(f"select * from {interface.schema_name}.{interface.table_name}_view2 order by order_col", conn)
     assert df.equals(df_out) or (df == df_out).all().iat[0]
+
+
+test_full(df_int)
