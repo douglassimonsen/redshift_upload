@@ -117,7 +117,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
             dependencies[view['view_name']] = set(view['dependencies']) - base_table
         return toposort.toposort_flatten(dependencies)
 
-    age_limit = datetime.datetime.today() - pandas.Timedelta(hours=4)
+    age_limit = datetime.datetime.today() - datetime.timedelta(hours=4)
     views = {}
     base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
     log.info("Collecting Redshift views to reinstantiate")

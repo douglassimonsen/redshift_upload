@@ -1,6 +1,5 @@
 import psycopg2
 import psycopg2.sql
-import pandas
 import boto3
 import botocore
 import datetime
@@ -97,43 +96,45 @@ class Interface:
             return {col: {"type": type_mapping(t)} for col, t in cursor.fetchall()}
 
     def get_dependent_views(self):
-        def get_view_query(row, dependencies):
-            view = row["dependent_schema"] + "." + row["dependent_view"]
-            view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{view}', true) as text"
+        def get_view_query(row):
+            view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{row['full_name']}', true) as text"
 
             with self.get_db_conn().cursor() as cursor:
                 cursor.execute(view_text_query)
                 view_text = cursor.fetchone()[0]
-            return {"owner": row["viewowner"], "dependencies": dependencies.get(view, []), "view_name": view, "text": view_text, "view_type": row["dependent_kind"]}
+            return {
+                "owner": row["viewowner"],
+                "dependencies": dependency_relations.get(row['full_name'], []),
+                "view_name": row['full_name'],
+                "text": view_text,
+                "view_type": row["dependent_kind"]
+            }
+
+        def format_row(row):
+            # columns = ['dependent_schema', 'dependent_view', 'dependent_kind', 'viewowner', 'nspname', 'relname']
+            return {
+                'full_name': f"{row[0]}.{row[1]}",
+                'dependency': f"{row[4]}.{row[5]}",
+                'dependent_kind': {"m": "materialized view", "v": "view"}.get(row[2], row[2]),
+                'viewowner': row[3],
+            }
 
         unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df
-        final_df = pandas.DataFrame(columns=["dependent_schema", "dependent_view", "dependent_kind", "viewowner", "nspname", "relname",])
+        dependencies = []
 
         while len(unsearched_views):
             view = unsearched_views[0]
-            df = pandas.read_sql(
-                dependent_view_query,
-                self.get_db_conn(),
-                params={
-                    'schema_name': view.split(".", 1)[0],
-                    'table_name': view.split(".", 1)[1]
-                }
-            )
-            final_df = final_df.append(df, ignore_index=True)
-            unsearched_views.extend([f'{row["dependent_schema"]}.{row["dependent_view"]}' for _, row in df.iterrows()])
+            with self.get_db_conn().cursor() as cursor:
+                cursor.execute(dependent_view_query, {'schema_name': view.split(".", 1)[0], 'table_name': view.split(".", 1)[1]})
+                data = [format_row(row) for row in cursor.fetchall()]
+            dependencies.extend(data)
+            unsearched_views.extend(row["full_name"] for row in data)
             unsearched_views.pop(0)
 
-        try:
-            final_df["name"] = final_df.apply(lambda row: f'{row["dependent_schema"]}.{row["dependent_view"]}', axis=1)
-            final_df["discrepancy"] = final_df.apply(lambda row: f'{row["nspname"]}.{row["relname"].lstrip("_")}', axis=1)
-            final_df["dependent_kind"] = final_df["dependent_kind"].replace({"m": "materialized view", "v": "view"})
-
-            dependencies = final_df[["name", "discrepancy"]].groupby("name").apply(lambda tmp_df: tmp_df["discrepancy"].drop_duplicates().tolist()).reset_index()
-            dependencies.columns = ["name", "dependencies"]
-            dependencies = dict(zip(dependencies["name"], dependencies["dependencies"]))
-        except ValueError:
-            dependencies = {}
-        return [get_view_query(row, dependencies) for i, row in final_df.iterrows()]
+        dependency_relations = {}
+        for row in dependencies:
+            dependency_relations.setdefault(row['full_name'], []).append(row['dependency'])
+        return [get_view_query(row) for row in dependencies]
 
     def get_remote_cols(self):
         with self.get_db_conn().cursor() as cursor:
