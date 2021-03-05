@@ -21,10 +21,10 @@ UPLOAD_DEFAULTS = {
     "sortkey": None,
     "load_in_parallel": 1,  # count of parallel files
     "default_logging": True,
-    'skip_source_types': False,
-    'skip_checks': False,
-    'skip_views': False,
-    'load_as_csv': False,
+    "skip_checks": False,
+    "skip_views": False,
+    "load_as_csv": False,
+    "no_header": False,  # indicates the CSV has no header row at the beginning
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"

@@ -48,6 +48,8 @@ def chunkify(source, upload_options):
             return [source.to_csv(None, index=False, header=False, encoding="utf-8")], load_in_parallel
     else:
         rows = list(source)
+        if not upload_options['no_header']:  # we can't include the header row, Redshift will treat it like a normal row (and this is easier than giving every parallel a header and using the IGNOREHEADER option in the copy command)
+            rows = rows[1:]
         load_in_parallel = min(upload_options['load_in_parallel'], len(rows))  # cannot have more groups than rows, otherwise it breaks
         chunk_size = math.ceil(len(rows) / load_in_parallel)
         return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
@@ -55,33 +57,28 @@ def chunkify(source, upload_options):
 
 def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict):
     if upload_options['load_as_csv']:
+        if isinstance(source, csv.reader):
+            return source
         if source.endswith(".csv"):
             log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
-            log.debug("Also, remember to remove headers of the CSVs! The uploader counts everything as a row")
+            log.debug("Also, if you do not have a header row, you need to set 'header_row' = False")
             with open(source, 'r') as f:
                 return csv.reader(f, *source_args, **source_kwargs)
         else:
             if isinstance(source, bytes):
                 source = source.decode("utf-8")
             return csv.reader(io.StringIO(source), *source_args, **source_kwargs)
-        return source
-
-    if isinstance(source, str):
-        if upload_options['skip_source_types']:
-            converters = defaultdict(lambda _: str)
-        else:
-            converters = None
-
+    elif isinstance(source, str):
         if source.endswith('.xlsx'):
-            return pandas.read_excel(source, *source_args, **source_kwargs, converters=converters)
+            return pandas.read_excel(source, *source_args, **source_kwargs)
         elif source.endswith(".csv"):
-            return pandas.read_csv(source, *source_args, **source_kwargs, converters=converters)
+            return pandas.read_csv(source, *source_args, **source_kwargs)
         else:
             raise ValueError("Your input was invalid")
     elif isinstance(source, pandas.DataFrame):
         return source
     else:
-        return pandas.DataFrame(source)  # please don't do this
+        raise ValueError("We do not support this type of source")
 
 
 def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool):  # check what happens ot the dic over multiple uses
@@ -176,12 +173,6 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
     def to_string(col: pandas.Series):
         return col.astype(str).replace({k: numpy.NaN for k in ["nan", "NaN", "None"]})
 
-    def protect_colname(cols):
-        ret_cols = []
-        for c in cols:
-            ret_cols.append(f'"{c}"')
-        return ret_cols
-
     def clean_column(col: pandas.Series, i: int, cols: pandas.Series):
         col_count = cols[:i].to_list().count(col)
         if col_count != 0:
@@ -262,6 +253,9 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws
 
     if upload_options['load_as_csv']:
         upload_options['skip_checks'] = True
+
+    if upload_options['no_header'] and not upload_options['load_as_csv']:
+        raise ValueError("This parameter is only used when using a CSV to upload")
 
     if not isinstance(upload_options['load_in_parallel'], int):
         raise ValueError("The option load_in_parallel must be an integer")
