@@ -63,8 +63,11 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
         if source.endswith(".csv"):
             log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
             log.debug("Also, if you do not have a header row, you need to set 'header_row' = False")
+            f_in_mem = io.StringIO()  # we need to load the file in memory
             with open(source, 'r') as f:
-                return csv.reader(f, *source_args, **source_kwargs)
+                f_in_mem.write(f.read())
+            f_in_mem.seek(0)
+            return csv.reader(f_in_mem, *source_args, **source_kwargs)
         else:
             if isinstance(source, bytes):
                 source = source.decode("utf-8")

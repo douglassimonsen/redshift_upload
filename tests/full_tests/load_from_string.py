@@ -26,6 +26,16 @@ def test_load_from_string():
         aws_info=aws_creds,
         # log_level="WARNING"
     )
+    with base_utilities.change_directory():
+        upload(
+            source="load_source.csv",
+            schema_name="sb_pm",
+            table_name="unit_test_column_expansion",
+            upload_options={"load_as_csv": True, 'load_in_parallel': 2},
+            aws_info=aws_creds,
+            # log_level="WARNING"
+        )
+
 
 if __name__ == '__main__':
     test_load_from_string()
