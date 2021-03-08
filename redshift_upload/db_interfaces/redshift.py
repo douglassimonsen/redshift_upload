@@ -208,7 +208,7 @@ class Interface:
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
-        cursor.execute(competing_conns_query, {'table_name': self.table_name})
+        cursor.execute(competing_conns_query, {'schema_name': self.schema_name, 'table_name': self.table_name})
         try:
             processes = set(cursor.fetchall()) - {(conn.get_backend_pid(), self.aws_info['redshift_username'])}  # we don't want to delete the connection we're on!
         except psycopg2.ProgrammingError:  # no results to fetch
