@@ -18,7 +18,7 @@ log = logging.getLogger("redshift_utilities")
 with base_utilities.change_directory():
     dependent_view_query = open('redshift_queries/dependent_views.sql', 'r').read()
     remote_cols_query = open('redshift_queries/remote_cols.sql', 'r').read()
-    competing_conns_query = open('redshift_queries/kill_connections.sql', 'r').read()
+    competing_conns_query = open('redshift_queries/competing_conns.sql', 'r').read()
     copy_table_query = open('redshift_queries/copy_table.sql', 'r').read()
 
 
@@ -42,6 +42,9 @@ class Interface:
         self.table_exists = self.check_table_exists()  # must be initialized after the _db, _s3_conn
 
     def get_db_conn(self) -> constants.Connection:
+        """
+        Gets DB connection. Caches connection for later use
+        """
         if self._db_conn is None:
             self._db_conn = psycopg2.connect(
                 host=self.aws_info['host'],
@@ -54,6 +57,9 @@ class Interface:
         return self._db_conn
 
     def get_s3_conn(self) -> constants.Connection:
+        """
+        Gets s3 connection to load data. Caches connection for later use.
+        """
         if self._s3_conn is None:
             self._s3_conn = boto3.resource(
                 "s3",
@@ -65,6 +71,9 @@ class Interface:
         return self._s3_conn
 
     def get_columns(self) -> Dict[str, Dict[str, str]]:
+        """
+        Gets columns and types from PG_TABLE_DEF
+        """
         def type_mapping(t) -> str:
             """
             basing off of https://www.flydata.com/blog/redshift-supported-data-types/
@@ -97,6 +106,9 @@ class Interface:
             return {col: {"type": type_mapping(t)} for col, t in cursor.fetchall()}
 
     def get_dependent_views(self) -> List[Dict]:
+        """
+        Returns a list of dictionaries containing information about views, including dependencies and source text
+        """
         def get_view_query(row) -> Dict:
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{row['full_name']}', true) as text"
 
@@ -138,11 +150,17 @@ class Interface:
         return [get_view_query(row) for row in dependencies]
 
     def get_remote_cols(self) -> List[str]:
+        """
+        Gets the columns from the database table
+        """
         with self.get_db_conn().cursor() as cursor:
             cursor.execute(remote_cols_query, {'table_name': self.table_name})
             return [x[0] for x in cursor.fetchall()]
 
     def load_to_s3(self, source_dfs) -> None:
+        """
+        Loads data to S3, using multiprocessing.pool.Threadpool to speed up process.
+        """
         def loader(data) -> None:
             i, source_df = data
             s3_name = self.s3_name + str(i)
@@ -167,6 +185,10 @@ class Interface:
             pool.map(loader, enumerate(source_dfs))
 
     def cleanup_s3(self, parallel_loads: int) -> None:
+        """
+        Attempts to delete S3 files used to copy to Redshift.
+        If it cannot delete, it will attempt to overwrite the S3 object for security and space savings
+        """
         for i in range(parallel_loads):
             obj = self.get_s3_conn().Object(self.aws_info['bucket'], self.s3_name + str(i))
             try:
@@ -177,12 +199,16 @@ class Interface:
                 obj.put(Body=b"")
 
     def get_exclusive_lock(self) -> Tuple[constants.Connection, constants.Connection]:
+        """
+        Uses STV_SESSIONS to find any other connections with locks on the table and then tries to kill them
+        """
         conn = self.get_db_conn()
         cursor = conn.cursor()
         if not self.table_exists:  # nothing to lock against
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
+        cursor.execute(competing_conns_query, {'table_name': self.table_name})
         try:
             processes = set(cursor.fetchall()) - {(conn.get_backend_pid(), self.aws_info['redshift_username'])}  # we don't want to delete the connection we're on!
         except psycopg2.ProgrammingError:  # no results to fetch
@@ -197,6 +223,9 @@ class Interface:
         return conn, cursor
 
     def check_table_exists(self) -> bool:
+        """
+        Checks whether the table exists using pg_tables
+        """
         query = '''
         select count(*) as cnt
         from pg_tables
@@ -209,6 +238,9 @@ class Interface:
             return cursor.fetchone()[0] != 0
 
     def copy_table(self, cursor) -> None:
+        """
+        Copies the S3 file(s) to Redshift
+        """
         log.info("Copying table from S3 to Redshift")
         query = copy_table_query.format(
             file_destination=self.full_table_name,
@@ -219,6 +251,9 @@ class Interface:
         cursor.execute(query)
 
     def expand_varchar_column(self, colname, max_str_len) -> bool:
+        """
+        Attempts to alter a varchar column to be varchar({max_str_len})
+        """
         if max_str_len > constants.MAX_VARCHAR_LENGTH:
             return False
 

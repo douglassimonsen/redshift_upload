@@ -18,6 +18,9 @@ log = logging.getLogger("redshift_utilities")
 
 
 def log_dependent_views(interface: redshift.Interface) -> None:
+    """
+    Gets dependent views and saves them locally for reinstantiation after table is regenerated.
+    """
     def log_query(metadata: Dict):
         metadata["text"] = f"set search_path = '{interface.schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"
         base_path = f"temp_view_folder/{interface.name}/{interface.table_name}"
@@ -35,6 +38,10 @@ def log_dependent_views(interface: redshift.Interface) -> None:
 
 
 def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_options: Dict) -> Dict[str, Dict[str, str]]:
+    """
+    Formats the simple column type format {column: type} to {column: {"type": type}}
+    Also gets column information from existing db table, if one is not dropping the table
+    """
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):
@@ -50,6 +57,11 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
 
 
 def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interface: redshift.Interface) -> pandas.DataFrame:
+    """
+    Checks to see if there are any columns in the local table that's not in the database table or vice versa.
+    If the column exists in the database and not the local table, it fills that column with Nones.
+    If the column exists in the local and not the database table, it raises an error and generate the SQL to manually add the columns to the table
+    """
     log.info("Getting column types from the existing Redshift table")
     remote_cols = interface.get_remote_cols()
     remote_cols_set = set(remote_cols)
@@ -64,6 +76,9 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
 
 
 def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict) -> None:
+    """
+    Copies the data from S3 to Redshift. Also drops, creates, truncates, and grants access (if applicable)
+    """
     def delete_table():
         log.info("Dropping Redshift table")
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
@@ -110,6 +125,10 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
 
 def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_access: List) -> None:
+    """
+    Using the dependency metadata saved about each view, creates a topological ordering of the views and creates each one.
+    Grants the same access to the views as the table
+    """
     def gen_order(views: Dict):
         base_table = {f"{interface.schema_name}.{interface.table_name}"}
         dependencies = {}
@@ -151,13 +170,17 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                     cursor.close()
                 conn.commit()
                 os.remove(f'{base_path}/{view["view_name"]}' + ".txt")
-            except psycopg2.ProgrammingError as e:  # if the type of column changed, a view can disapper.
+            except psycopg2.ProgrammingError:  # if the type of column changed, a view can disapper.
                 conn.rollback()
                 log.warning(f"We were unable to load view: {view_name}")
                 log.warning(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
 def record_upload(interface: redshift.Interface, source: pandas.DataFrame) -> None:
+    """
+    Records basic information about the upload session to a table.
+    Happens at the end so a failure here won't impact the overall upload.
+    """
     query = f'''
     insert into {interface.aws_info['records_table']}
            (  table_name,     upload_time,     rows,     redshift_user,     os_user)

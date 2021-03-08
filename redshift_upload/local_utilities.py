@@ -32,6 +32,9 @@ def initialize_logger(log_level) -> None:
 
 
 def chunkify(source, upload_options) -> List[str]:
+    """
+    Breaks the single file into multiple smaller chunks to speed loading into S3 and copying into Redshift
+    """
     def chunk_to_string(chunk):
         f = io.StringIO()
         writer = csv.writer(f)
@@ -57,6 +60,11 @@ def chunkify(source, upload_options) -> List[str]:
 
 
 def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict) -> Union[pandas.DataFrame, csv.reader]:
+    """
+    Loads/transforms the source data to simplify data handling for the rest of the program.
+    Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
+    source_args and source_kwargs both get passed to the csv.reader, pandas.read_excel, and pandas.read_csv functions
+    """
     if upload_options['load_as_csv']:
         if isinstance(source, csv_reader_type):
             return source
@@ -91,6 +99,12 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
 
 
 def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool) -> Tuple[pandas.DataFrame, Dict]:  # check what happens ot the dic over multiple uses
+    """
+    Uses pandas functions to cast each column to it's proper type.
+    If types have been manually specified or specified by the database table and the column cannot format the data to conform, it will raise a ValueError
+    If the column fails to be cast, it will print the first 5 values which fail to conform to the column type.
+    If a varchar column needs more space to hold a new string, the interface will try to alter the column
+    """
     def to_bool(col: pandas.Series):
         assert col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").isin(["true", "false", "nan"]).all()  # Nones get turned into nans and nans get stringified
         return col.replace({None: "nan"}).astype(str).str.lower().fillna("nan").apply(lambda x: str(x == "true") if x != "nan" else "")  # null is blank because the copy command defines it that way
@@ -255,6 +269,18 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
 
 
 def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:
+    """
+    Checks the upload_options dictionary for incompatible selections. Current incompatible options:
+
+    If a distkey or sortkey is set, the diststyle will be set to key (https://docs.aws.amazon.com/redshift/latest/dg/c_choosing_dist_sort.html)
+    If load_as_csv is True, the program cannot check types (type checking is based off a pandas Dataframe) so skip_checks will be set to True
+    If no_header is True and load_as_csv is False, we raise a ValueError because no_header is only used for CSVs
+    load_in_parallel must be an integer
+    Both schema_name and table_name must be set
+    At most one of truncate_table and drop_table can be set to True
+    redshift_username, redshift_password, access_key, secret_key, bucket, host, dbname, port must all be set
+    You cannot both skip_checks and drop_table, since we need to calculate the column types when recreating the table. Note: if skip_checks is True and the table doesn't exist yet, the program will raise a ValueError when it checks for the table's existence
+    """
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
     if upload_options['distkey'] or upload_options['sortkey']:
