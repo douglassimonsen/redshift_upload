@@ -154,7 +154,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
 
     conn = interface.get_db_conn()
     cursor = conn.cursor()
-    log.info("Reinstantiating Redshift views to")
+    log.info("Reinstantiating Redshift views")
     with base_utilities.change_directory():
         for view_name in reload_order:
             view = views[view_name]
@@ -162,7 +162,8 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                 if drop_table is True:
                     cursor.execute(view["text"])
                     if grant_access:
-                        cursor.execute(f'GRANT ALL ON {view["view_name"]} TO {", ".join(grant_access)}')
+                        cursor.execute(view['grants'])
+                    log.info(f"Reinstantiated: {view['view_name']}")
                 elif view.get("view_type", "view") == "view":  # if there isn't a drop_table, the views still exist and we don't need to do anything
                     pass
                 else:  # only get here when complete_refresh is False and view_type is materialized view

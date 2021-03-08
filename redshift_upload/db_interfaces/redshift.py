@@ -20,6 +20,7 @@ with base_utilities.change_directory():
     remote_cols_query = open('redshift_queries/remote_cols.sql', 'r').read()
     competing_conns_query = open('redshift_queries/competing_conns.sql', 'r').read()
     copy_table_query = open('redshift_queries/copy_table.sql', 'r').read()
+    view_privileges = open('redshift_queries/view_privileges.sql').read()
 
 
 class Interface:
@@ -120,8 +121,14 @@ class Interface:
                 "dependencies": dependency_relations.get(row['full_name'], []),
                 "view_name": row['full_name'],
                 "text": view_text,
-                "view_type": row["dependent_kind"]
+                "view_type": row["dependent_kind"],
             }
+
+        def get_grants(schema_name, view_name):
+            with self.get_db_conn().cursor() as cursor:
+                cursor.execute(view_privileges, {'schema_name': schema_name, 'view_name': view_name})
+                grants = ", ".join(x[0] for x in cursor.fetchall())
+                return f"GRANT SELECT ON {schema_name}.{view_name} to {grants}"
 
         def format_row(row) -> Dict:
             # columns = ['dependent_schema', 'dependent_view', 'dependent_kind', 'viewowner', 'nspname', 'relname']
@@ -130,6 +137,7 @@ class Interface:
                 'dependency': f"{row[4]}.{row[5]}",
                 'dependent_kind': {"m": "materialized view", "v": "view"}.get(row[2], row[2]),
                 'viewowner': row[3],
+                'grants': get_grants(row[0], row[1])
             }
 
         unsearched_views = [f"{self.schema_name}.{self.table_name}"]  # the table is searched, but will not appear in the final_df

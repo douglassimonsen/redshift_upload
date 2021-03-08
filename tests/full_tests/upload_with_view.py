@@ -61,4 +61,4 @@ def test_upload_with_view(df):
 
 
 if __name__ == '__main__':
-    test_full(df_int)
+    test_upload_with_view(df_int)
