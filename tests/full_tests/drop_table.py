@@ -48,4 +48,4 @@ def test_drop_table(df):
 
 
 if __name__ == '__main__':
-    test_full(df_int)
+    test_drop_table(df_int)

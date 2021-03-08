@@ -4,6 +4,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import upload, base_utilities  # noqa
 import pandas  # noqa
 import json  # noqa
+import pytest
 with base_utilities.change_directory():
     with open("../aws_creds.json") as f:
         aws_creds = json.load(f)
@@ -16,15 +17,16 @@ def test_add_column():
         source=df1,
         schema_name="sb_pm",
         table_name="unit_test_add_column",
-        upload_options={'load_in_parallel': 10, "truncate_table": True},
+        upload_options={'load_in_parallel': 10, "drop_table": True},
         aws_info=aws_creds
     )
-    upload(
-        source=df2,
-        schema_name="sb_pm",
-        table_name="unit_test_add_column",
-        aws_info=aws_creds
-    )
+    with pytest.raises(NotImplementedError):
+        upload(
+            source=df2,
+            schema_name="sb_pm",
+            table_name="unit_test_add_column",
+            aws_info=aws_creds
+        )
 
 
 if __name__ == '__main__':
