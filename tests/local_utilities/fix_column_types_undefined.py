@@ -1,9 +1,8 @@
 import sys
 import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]) + '/redshift_upload')
-
-import local_utilities
-from db_interfaces import dummy
+sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
+from redshift_upload import local_utilities  # noqa
+from redshift_upload.db_interfaces import dummy  # noqa
 import pandas  # noqa
 import pytest  # noqa
 
@@ -43,3 +42,7 @@ def test_forcible_conversion(df_in, df_out, typ):
     act_df_out, types_out = local_utilities.fix_column_types(df_in, {}, dummy.Interface(), False)
     assert types_out == {"a": typ}
     assert act_df_out.equals(df_out) or (act_df_out == df_out).all().iat[0]
+
+
+if __name__ == '__main__':
+    test_forcible_conversion(int1_in, int1_out, "bigint")

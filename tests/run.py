@@ -24,10 +24,14 @@ def main(coverage=False):
     with open("aws_creds.json") as f:
         aws_creds = json.load(f)
     pytest.main([
-        'base_utilities/test.py',
+        'base_utilities/change_directory.py',
+        "full_tests/add_column.py",
         "full_tests/column_expansion.py",
         "full_tests/drop_table.py",
+        "full_tests/load_from_string.py",
+        "full_tests/no_data.py",
         "full_tests/truncate_table.py",
+        "full_tests/upload_in_parallel.py",
         "full_tests/upload_with_view.py",
         "local_utilities/check_coherence.py",
         "local_utilities/fix_column_types_defined.py",

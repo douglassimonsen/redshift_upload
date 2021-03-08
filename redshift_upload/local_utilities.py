@@ -14,6 +14,7 @@ except ModuleNotFoundError:
     from . import constants
     from .db_interfaces import redshift
 log = logging.getLogger("redshift_utilities")
+csv_reader_type = type(csv.reader(io.StringIO()))  # the actual type is trapped in a compiled binary. See more here: https://stackoverflow.com/questions/46673845/why-is-csv-reader-not-considered-a-class
 
 
 def initialize_logger(log_level) -> None:
@@ -57,7 +58,7 @@ def chunkify(source, upload_options) -> List[str]:
 
 def load_source(source: constants.SourceOptions, source_args: List, source_kwargs: Dict, upload_options: Dict) -> Union[pandas.DataFrame, csv.reader]:
     if upload_options['load_as_csv']:
-        if isinstance(source, csv.reader):
+        if isinstance(source, csv_reader_type):
             return source
         if source.endswith(".csv"):
             log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")

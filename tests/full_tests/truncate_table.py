@@ -1,8 +1,7 @@
 import sys
 import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]) + '/redshift_upload')
-import upload  # noqa
-import base_utilities  # noqa
+sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
+from redshift_upload import upload, base_utilities  # noqa
 import pandas  # noqa
 import json  # noqa
 import datetime  # noqa
@@ -31,17 +30,17 @@ df_text = pandas.DataFrame([{"a": "hello"}, {"a": "Goodbye"}, {"a": None}])
         df_text,
     ],
 )
-def test_full(df):
+def test_truncate_table(df):
     df = df.copy()
     df["order_col"] = df.index
-    upload.upload(
+    upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
         table_name="unit_test_simple_upload_truncate_table",
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
-    interface = upload.upload(
+    interface = upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
         table_name="unit_test_simple_upload_complete_soft_refresh",
@@ -51,3 +50,7 @@ def test_full(df):
     with interface.get_db_conn() as conn:
         df_out = pandas.read_sql(f"select * from {interface.full_table_name} order by order_col", conn)
     assert df.equals(df_out) or (df == df_out).all().iat[0]
+
+
+if __name__ == '__main__':
+    test_truncate_table(df_int)

@@ -1,8 +1,7 @@
 import sys
 import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]) + '/redshift_upload')
-import upload  # noqa
-import base_utilities  # noqa
+sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
+from redshift_upload import upload, base_utilities  # noqa
 import pandas  # noqa
 import json  # noqa
 import datetime  # noqa
@@ -31,11 +30,11 @@ df_text = pandas.DataFrame([{"a": "hello"}, {"a": "Goodbye"}, {"a": None}])
         df_text,
     ],
 )
-def test_full(df):
+def test_upload_with_view(df):
     df = df.copy()
     df["order_col"] = df.index
 
-    interface = upload.upload(
+    interface = upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
         table_name="unit_test_upload_with_view",
@@ -48,7 +47,7 @@ def test_full(df):
         cursor.execute(f"create or replace view {interface.schema_name}.{interface.table_name}_view as select * from {interface.schema_name}.{interface.table_name}")
         cursor.execute(f"create or replace view {interface.schema_name}.{interface.table_name}_view2 as select * from {interface.schema_name}.{interface.table_name}_view")
         conn.commit()
-    interface = upload.upload(
+    interface = upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
         table_name="unit_test_upload_with_view",
@@ -61,4 +60,5 @@ def test_full(df):
     assert df.equals(df_out) or (df == df_out).all().iat[0]
 
 
-test_full(df_int)
+if __name__ == '__main__':
+    test_full(df_int)

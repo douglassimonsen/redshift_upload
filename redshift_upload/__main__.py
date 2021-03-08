@@ -55,6 +55,3 @@ no_header:
 Default: False
 Indicates the CSV has no header row at the beginning. The uploader will otherwise consider every row to be data
 """.strip())
-    exit()
-else:
-    from .upload import upload
