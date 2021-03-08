@@ -78,6 +78,11 @@ def load_source(source: constants.SourceOptions, source_args: List, source_kwarg
             raise ValueError("Your input was invalid")
     elif isinstance(source, pandas.DataFrame):
         return source
+    elif isinstance(source, list):
+        if len(source) == 0:
+            ValueError("We do not accept lists of zero length")
+        else:
+            return pandas.DataFrame(source)
     else:
         raise ValueError("We do not support this type of source")
 

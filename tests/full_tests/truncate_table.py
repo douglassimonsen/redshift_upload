@@ -11,7 +11,7 @@ with base_utilities.change_directory():
         aws_creds = json.load(f)
 today = datetime.datetime.today()
 today_date = today.date()
-df_int = pandas.DataFrame([{"a": 1}, {"a": 2}, {"a": 3}])
+df_int = pandas.DataFrame([{"a": 1}, {"a": 2}, {"a": 3}]).astype(int)
 df_float = pandas.DataFrame([{"a": 1.0}, {"a": 2.1}, {"a": 3.0}])
 df_dt = pandas.DataFrame([{"a": today}, {"a": today}, {"a": None}])
 df_date = pandas.DataFrame([{"a": today_date}, {"a": today_date}, {"a": None}])
@@ -43,7 +43,7 @@ def test_truncate_table(df):
     interface = upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="sb_pm",
-        table_name="unit_test_simple_upload_complete_soft_refresh",
+        table_name="unit_test_simple_upload_truncate_table",
         upload_options={"truncate_table": True},
         aws_info=aws_creds
     )
