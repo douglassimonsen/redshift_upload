@@ -18,6 +18,7 @@ UPLOAD_DEFAULTS = {
     "truncate_table": False,
     "drop_table": False,
     "cleanup_s3": True,
+    "close_on_end": True,
     "grant_access": [],
     "diststyle": "even",
     "distkey": None,

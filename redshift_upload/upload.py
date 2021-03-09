@@ -69,4 +69,8 @@ def upload(
     if upload_options['cleanup_s3']:
         interface.cleanup_s3(load_in_parallel)
     log.info(f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!")
-    return interface
+    if upload_options["close_on_end"]:
+        interface._db_conn.close()
+        del interface._s3_conn
+    else:
+        return interface
