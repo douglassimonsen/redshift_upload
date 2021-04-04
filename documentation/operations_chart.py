@@ -39,4 +39,4 @@ dot.edge('J', 'N', style="dashed")
 
 dot.node('legend', 'The flow of the upload process. Nodes in light blue are the core components that run every time.   \nOther nodes can be activated by changing the upload_options dictionary. Options are run left   \nto right (that is, "Recreate views from local data" will run before "Clean up S3 files".   ', shape='rectangle', lp='0,0!')
 
-dot.render('process_flow.png')
+dot.render('process_flow')
