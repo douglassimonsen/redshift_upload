@@ -1,7 +1,7 @@
 from graphviz import Digraph
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-dot = Digraph(comment="Code Flow")
+dot = Digraph(comment="Code Flow", format='png')
 
 dot.node('A', 'Check option coherence', style='filled', fillcolor='#add8e6')
 dot.node('B', 'Start default logging', style='filled', fillcolor='#add8e6')
