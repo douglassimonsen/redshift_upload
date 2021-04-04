@@ -18,7 +18,7 @@ This package follows the following steps to upload your data to Redshift.
 10. If a records table has been specified, records basic information about the upload
 11. Cleans up the S3 files, if specified
 12. Returns the interface object, in case you want to see more data or use the connection to the db to continue querying
-
+![Library Workflow](https://github.com/douglassimonsen/redshift_upload/blob/main/documentation/process_flow.png)
 ## Example
 ```python3
 df = pandas.DataFrame([{"a": "hi"}, {"a": "hi"}])
