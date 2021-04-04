@@ -37,6 +37,7 @@ def main(coverage=False):
         "local_utilities/fix_column_types_defined.py",
         "local_utilities/fix_column_types_undefined.py",
         "local_utilities/load_source.py",
+        "local_utilities/stringify_columns.py",
     ])
 
     kill_tables([
