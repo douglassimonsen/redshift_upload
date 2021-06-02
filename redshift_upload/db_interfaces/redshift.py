@@ -17,7 +17,6 @@ log = logging.getLogger("redshift_utilities")
 
 with base_utilities.change_directory():
     dependent_view_query = open('redshift_queries/dependent_views.sql', 'r').read()
-    remote_cols_query = open('redshift_queries/remote_cols.sql', 'r').read()
     competing_conns_query = open('redshift_queries/competing_conns.sql', 'r').read()
     copy_table_query = open('redshift_queries/copy_table.sql', 'r').read()
     view_privileges = open('redshift_queries/view_privileges.sql').read()
@@ -156,14 +155,6 @@ class Interface:
         for row in dependencies:
             dependency_relations.setdefault(row['full_name'], []).append(row['dependency'])
         return [get_view_query(row) for row in dependencies]
-
-    def get_remote_cols(self) -> List[str]:
-        """
-        Gets the columns from the database table
-        """
-        with self.get_db_conn().cursor() as cursor:
-            cursor.execute(remote_cols_query, {'schema_name': self.schema_name, 'table_name': self.table_name})
-            return [x[0] for x in cursor.fetchall()]
 
     def load_to_s3(self, source_dfs) -> None:
         """

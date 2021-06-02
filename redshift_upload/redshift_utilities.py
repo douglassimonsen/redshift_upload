@@ -63,7 +63,7 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
     If the column exists in the local and not the database table, it raises an error and generate the SQL to manually add the columns to the table
     """
     log.info("Getting column types from the existing Redshift table")
-    remote_cols = interface.get_remote_cols()
+    remote_cols = list(interface.get_columns().keys())
     remote_cols_set = set(remote_cols)
     local_cols = set(source_df.columns.to_list())
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
