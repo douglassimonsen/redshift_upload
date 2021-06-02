@@ -162,7 +162,7 @@ class Interface:
         Gets the columns from the database table
         """
         with self.get_db_conn().cursor() as cursor:
-            cursor.execute(remote_cols_query, {'table_name': self.table_name})
+            cursor.execute(remote_cols_query, {'schema_name': self.schema_name, 'table_name': self.table_name})
             return [x[0] for x in cursor.fetchall()]
 
     def load_to_s3(self, source_dfs) -> None:
