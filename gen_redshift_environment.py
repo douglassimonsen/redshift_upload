@@ -1,6 +1,7 @@
 from botocore.client import Config
 import boto3
 import json
+import botocore
 from pprint import pprint
 import time
 import datetime
@@ -52,12 +53,17 @@ def check_redshift_up():
 
 
 def delete_resources():
-    redshift.delete_cluster(ClusterIdentifier="test-cluster", SkipFinalClusterSnapshot=True)
-    bucket = s3.Bucket(bucket_name)
-    for key in bucket.objects.all():
-        key.delete()
-    bucket.delete()
-
+    try:
+        redshift.delete_cluster(ClusterIdentifier="test-cluster", SkipFinalClusterSnapshot=True)
+    except redshift.exceptions.ClusterNotFoundFault:
+        print("Redshift cluster did not exist")
+    try:
+        bucket = s3.Bucket(bucket_name)
+        for key in bucket.objects.all():
+            key.delete()
+        bucket.delete()
+    except boto3.client('s3').exceptions.NoSuchBucket:  # bro, WTF
+        print("S3 bucket didn't exist")
 
 def gen_test_creds(cluster_info):
     x = {
