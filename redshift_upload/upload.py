@@ -44,14 +44,14 @@ def upload(
     interface = interface or redshift.Interface(schema_name, table_name, aws_info)
     if not interface.table_exists and upload_options['skip_checks']:
         raise ValueError("The table does not yet exist, you need the checks to determine what column types to use")
-    source = local_utilities.load_source(source, source_args, source_kwargs, upload_options)
+    source = local_utilities.load_source(source)
 
     if not upload_options['skip_checks']:
         column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
-        source, column_types = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
+        source, column_types, fixed_columns = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
 
         if not upload_options['drop_table'] and interface.table_exists:
-            source = redshift_utilities.compare_with_remote(source, column_types, interface)
+            redshift_utilities.compare_with_remote(source, column_types, interface)
     else:
         log.info("Skipping data checks")
 

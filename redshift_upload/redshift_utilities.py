@@ -6,6 +6,7 @@ import datetime
 import psycopg2
 import psycopg2.sql
 import getpass
+import csv
 from typing import Dict, List
 try:
     import base_utilities
@@ -65,14 +66,12 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
     log.info("Getting column types from the existing Redshift table")
     remote_cols = list(interface.get_columns().keys())
     remote_cols_set = set(remote_cols)
-    local_cols = set(source_df.columns.to_list())
+
+    local_cols = set(csv.DictReader(source_df).fieldnames); source_df.seek(0)
+
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
         log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {column_types[col]} default null;" for col in local_cols.difference(remote_cols_set)))
         raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
-    else:
-        for col in remote_cols_set.difference(local_cols):
-            source_df[col] = None
-    return source_df[remote_cols]
 
 
 def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict) -> None:
