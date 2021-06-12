@@ -15,7 +15,7 @@ df2 = pandas.DataFrame([{"a": "hi"}, {"a": "hi", "b": pandas.Timestamp('2021-01-
 def test_add_column():
     upload(
         source=df1,
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_add_column",
         upload_options={'load_in_parallel': 10, "drop_table": True},
         aws_info=aws_creds
@@ -23,7 +23,7 @@ def test_add_column():
     with pytest.raises(NotImplementedError):
         upload(
             source=df2,
-            schema_name="sb_pm",
+            schema_name="public",
             table_name="unit_test_add_column",
             aws_info=aws_creds
         )

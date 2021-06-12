@@ -37,9 +37,9 @@ def test_drop_table(df):
     df["order_col"] = df.index
     interface = upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_simple_upload_drop_table",
-        upload_options={"drop_table": True},
+        upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds
     )
     with interface.get_db_conn() as conn:

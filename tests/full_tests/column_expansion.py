@@ -14,14 +14,14 @@ df2 = pandas.DataFrame([{"a": "hi" * 100}, {"a": "hi"}])
 def test_column_expansion():
     upload(
         source=df1,
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_column_expansion",
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
     upload(
         source=df2,
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_column_expansion",
         aws_info=aws_creds,
     )

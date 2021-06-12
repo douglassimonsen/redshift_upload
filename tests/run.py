@@ -15,7 +15,7 @@ def kill_tables(tables, aws_creds):
     ) as conn:
         cursor = conn.cursor()
         for table in tables:
-            cursor.execute(f"drop table if exists sb_pm.{table} cascade")
+            cursor.execute(f"drop table if exists public.{table} cascade")
         conn.commit()
 
 

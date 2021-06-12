@@ -12,7 +12,7 @@ with base_utilities.change_directory():
 def test_load_from_string():
     upload(
         source=pandas.DataFrame([{"a": "hi"}, {"a": "hi"}]),
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_column_expansion",
         upload_options={"load_as_csv": False, 'load_in_parallel': 2},
         aws_info=aws_creds,
@@ -20,7 +20,7 @@ def test_load_from_string():
     )
     upload(
         source="a\nb\nc\n",
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_column_expansion",
         upload_options={"load_as_csv": True, 'load_in_parallel': 2},
         aws_info=aws_creds,
@@ -29,7 +29,7 @@ def test_load_from_string():
     with base_utilities.change_directory():
         upload(
             source="load_source.csv",
-            schema_name="sb_pm",
+            schema_name="public",
             table_name="unit_test_column_expansion",
             upload_options={"load_as_csv": True, 'load_in_parallel': 2},
             aws_info=aws_creds,

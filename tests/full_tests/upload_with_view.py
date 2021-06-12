@@ -36,9 +36,9 @@ def test_upload_with_view(df):
 
     interface = upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_upload_with_view",
-        upload_options={"drop_table": True},
+        upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds
     )
 
@@ -49,9 +49,9 @@ def test_upload_with_view(df):
         conn.commit()
     interface = upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_upload_with_view",
-        upload_options={"drop_table": True},
+        upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds
     )
 

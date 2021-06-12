@@ -13,7 +13,7 @@ df = pandas.DataFrame([{"a": "hi"}, {"a": "hi"}] * 100)
 def test_upload_in_parallel():
     upload(
         source=df,
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_column_expansion",
         upload_options={'load_in_parallel': 10},
         aws_info=aws_creds

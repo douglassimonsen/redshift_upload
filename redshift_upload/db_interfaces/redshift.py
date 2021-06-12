@@ -179,6 +179,7 @@ class Interface:
 
             obj.wait_until_exists()
 
+        self.get_s3_conn()  # we need an initial call to initialize the S3 conn. Otherwise the threads will simultaneously create multiple instances, causing the error here: https://stackoverflow.com/questions/52675027/why-do-i-sometimes-get-key-error-using-sqs-client
         log.info(f"Loading table to S3 in {len(source_dfs)} chunks")
         with multiprocessing.pool.ThreadPool(processes=min(len(source_dfs), constants.MAX_THREAD_COUNT)) as pool:
             pool.map(loader, enumerate(source_dfs))

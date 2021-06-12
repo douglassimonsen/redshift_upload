@@ -13,7 +13,7 @@ df = pandas.DataFrame(columns=['a', 'b'])
 def test_no_data():
     return upload(
         source=df,
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_no_data",
         upload_options={'load_in_parallel': 10, "truncate_table": True},
         aws_info=aws_creds

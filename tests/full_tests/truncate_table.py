@@ -35,16 +35,16 @@ def test_truncate_table(df):
     df["order_col"] = df.index
     upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_simple_upload_truncate_table",
-        upload_options={"drop_table": True},
+        upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds
     )
     interface = upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="sb_pm",
+        schema_name="public",
         table_name="unit_test_simple_upload_truncate_table",
-        upload_options={"truncate_table": True},
+        upload_options={"truncate_table": True, "close_on_end": False},
         aws_info=aws_creds
     )
     with interface.get_db_conn() as conn:
