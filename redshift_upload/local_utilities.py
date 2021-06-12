@@ -42,10 +42,23 @@ def chunkify(source, upload_options) -> List[str]:
         f.seek(0)
         return f.read().encode("utf-8")
 
-    rows = list(csv.reader(source))[1:]
+    rows = list(source.rows())[1:]
     load_in_parallel = min(upload_options['load_in_parallel'], len(rows))  # cannot have more groups than rows, otherwise it breaks
     chunk_size = math.ceil(len(rows) / load_in_parallel)
     return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
+
+
+class Source:
+    def __init__(self, f: io.StringIO):
+        f.seek(0)
+        dict_reader = csv.DictReader(f)
+        self.source = f
+        self.fieldnames = dict_reader.fieldnames
+        self.num_rows = len(list(dict_reader))
+
+    def rows(self):
+        self.source.seek(0)
+        return csv.DictReader(self.source)
 
 
 def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.reader]:
@@ -64,16 +77,14 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
             f = io.StringIO()  # we need to load the file in memory
             with open(source, 'r') as f:
                 f.write(f.read())
-            f.seek(0)
-            return f
+            return Source(f)
 
         else:
             if isinstance(source, bytes):
                 source = source.decode("utf-8")
             f = io.StringIO()
             f.write(source)
-            f.seek(0)
-            return f
+            return Source(f)
 
     elif isinstance(source, list):
         if len(source) == 0:
@@ -83,14 +94,12 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
             dict_writer = csv.DictWriter(output_file, source[0].keys())
             dict_writer.writeheader()
             dict_writer.writerows(source)
-        f.seek(0)
-        return f
+            return Source(f)
 
     elif isinstance(source, pandas.DataFrame):
         f = io.StringIO()
         source.to_csv(f, index=False)
-        f.seek(0)
-        return f
+        return Source(f)
 
     raise ValueError("We do not support this type of source")
 
@@ -103,7 +112,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
         return col.replace(".", "_")[:constants.MAX_COLUMN_LENGTH]  # yes, this could cause a collision, but probs not
 
     log.info("Determining proper column types for serialization")
-    columns = csv.DictReader(df).fieldnames; df.seek(0)
+    columns = df.fieldnames
     fixed_columns = [x.lower() for x in columns]  # need to lower everyone first, before checking for dups
     fixed_columns = [clean_column(x, i, columns) for i, x in enumerate(columns)]
     col_types = {
@@ -111,13 +120,12 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
         for col in columns
     }
 
-    for row in csv.DictReader(df):
+    for row in df.rows():
         for col, data in col_types.items():
             viable_types = [x for x in data if x[1](row[col])]
             if not viable_types:
                 raise ValueError("There are no valid types (not even VARCHAR) for this function!")
             col_types[col] = viable_types
-    df.seek(0)
 
     col_types = {k: v[0] for k, v in col_types.items()}
     for colname in columns:

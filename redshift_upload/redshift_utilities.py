@@ -67,7 +67,7 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
     remote_cols = list(interface.get_columns().keys())
     remote_cols_set = set(remote_cols)
 
-    local_cols = set(csv.DictReader(source_df).fieldnames); source_df.seek(0)
+    local_cols = set(source_df.fieldnames)
 
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
         log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {column_types[col]} default null;" for col in local_cols.difference(remote_cols_set)))
