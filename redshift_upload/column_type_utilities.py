@@ -84,10 +84,10 @@ def boolean_func(x, type_info):
     bool_opts = [
         '0',
         '1',
-        'True',
-        'False'
+        'true',
+        'false'
     ]
-    return str(x) in bool_opts
+    return str(x).lower() in bool_opts
 
 
 def varchar_func(x, type_info):
