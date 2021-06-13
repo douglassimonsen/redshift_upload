@@ -48,6 +48,9 @@ def chunkify(source, upload_options) -> List[str]:
 
 
 class Source:
+    """
+    A class representing the data to be loaded to Redshift
+    """
     def __init__(self, f: io.StringIO):
         f.seek(0)
         dict_reader = csv.DictReader(f)
@@ -110,6 +113,9 @@ def load_source(source: constants.SourceOptions) -> Source:
 
 
 def get_bad_vals(rows, col, type_info, top=5):
+    """
+    An error logging function to identify the first n values in a column that don't match the predefined type of the column
+    """
     bad_vals = []
     bad_indices = []
     for i, row in enumerate(rows):
@@ -126,6 +132,12 @@ def get_bad_vals(rows, col, type_info, top=5):
 
 
 def fix_column_types(source: Source, interface: redshift.Interface, drop_table: bool) -> None:  # check what happens to the dict over multiple uses
+    """
+    Verifies the column names are not too long.
+    Verifies the column data matches any predefined types.
+    Generates an appropriate type for undefined columns.
+    If varchars are longer than acceptable for the remote, expands the column
+    """
     def clean_column(col: str, i: int, cols: List):
         col_count = cols[:i].count(col)
         if col_count != 0:

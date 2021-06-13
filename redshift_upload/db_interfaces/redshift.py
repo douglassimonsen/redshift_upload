@@ -94,6 +94,9 @@ class Interface:
         }
 
         def dealias(alias):
+            """
+            Merges multiple names for the same column type into a single name
+            """
             alias = alias.upper()
             if alias in alias_mapping.values():
                 return alias
@@ -130,13 +133,15 @@ class Interface:
             }
 
         def get_grants(schema_name, view_name):
+            """
+            Lists the various SELECT grants for a table
+            """
             with self.get_db_conn().cursor() as cursor:
                 cursor.execute(view_privileges, {'schema_name': schema_name, 'view_name': view_name})
                 grants = ", ".join(x[0] for x in cursor.fetchall())
                 return f"GRANT SELECT ON {schema_name}.{view_name} to {grants}"
 
         def format_row(row) -> Dict:
-            # columns = ['dependent_schema', 'dependent_view', 'dependent_kind', 'viewowner', 'nspname', 'relname']
             return {
                 'full_name': f"{row[0]}.{row[1]}",
                 'dependency': f"{row[4]}.{row[5]}",

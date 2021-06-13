@@ -6,7 +6,8 @@ from pprint import pprint
 import time
 import datetime
 import requests
-aws_creds = json.load(open('aws_creds.json'))
+import sys
+aws_creds = json.load(open('aws_account_creds.json'))
 redshift = boto3.client(
     'redshift', 
     region_name='us-east-2',
@@ -108,19 +109,27 @@ def gen_test_creds(cluster_info):
         "dbname": "dev",
         "port": cluster_info['Endpoint']['Port']
     }
-    with open("test.json", "w") as f:
+    with open("tests/aws_creds.json", "w") as f:
         json.dump(x, f, indent=4)
 
 
-def main():
+def start():
     create_resources()
     while True:
         cluster_info = check_redshift_up()
         if cluster_info is not None:
             break
     gen_test_creds(cluster_info)
+
+
+def end():
     delete_resources()
 
 
 if __name__ == '__main__':
-    main()
+    if '--end' in sys.argv:
+        end()
+    elif '--start' in sys.argv:
+        start()
+    else:
+        print("==HELP==\nTo set up a redshift environment:\n\tgen_redshift_environment.py --start\n\nTo tear down the redshift environment:\n\tgen_redshift_environment.py --end")

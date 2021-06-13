@@ -2,6 +2,8 @@ import datetime
 
 
 def date_func(x, type_info):
+    """Tests if the string is a valid date"""
+    # Timestamp must be between 4713-01-01 BC and 5874897-12-31. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
@@ -13,6 +15,8 @@ def date_func(x, type_info):
 
 
 def timestamptz_func(x, type_info):
+    """Tests if the string is a valid timestamptz"""
+    # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
@@ -23,6 +27,8 @@ def timestamptz_func(x, type_info):
 
 
 def timestamp_func(x, type_info):
+    """Tests if the string is a valid timestamp"""
+    # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
@@ -33,6 +39,7 @@ def timestamp_func(x, type_info):
 
 
 def smallint_func(x, type_info):
+    """Tests if the string is a valid smallint"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')
@@ -45,6 +52,7 @@ def smallint_func(x, type_info):
 
 
 def int_func(x, type_info):
+    """Tests if the string is a valid int"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')
@@ -57,6 +65,7 @@ def int_func(x, type_info):
 
 
 def bigint_func(x, type_info):
+    """Tests if the string is a valid bigint"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')  # rstrip would take 1.1.0.0 -> 1.1, so we do it in two steps. Technically, this would take 1234..0 -> 1234, but that's a problem for future me
@@ -69,6 +78,7 @@ def bigint_func(x, type_info):
 
 
 def double_precision_func(x, type_info):
+    """Tests if the string is a valid double precision"""
     if x == '':
         return True
     try:
@@ -79,6 +89,7 @@ def double_precision_func(x, type_info):
 
 
 def boolean_func(x, type_info):
+    """Tests if the string is a valid boolean"""
     if x == '':
         return True
     bool_opts = [
@@ -91,12 +102,14 @@ def boolean_func(x, type_info):
 
 
 def varchar_func(x, type_info):
+    """Tests if the string is a string less than 65536 bytes"""
     row_len = len(str(x).encode("utf-8"))
     type_info['suffix'] = max(row_len, type_info['suffix'] or 1)
     return row_len < 65536
 
 
 def timetz_func(x, type_info):
+    """Tests if the string is a valid timetz"""
     if x == '':
         return True
     try:
@@ -107,6 +120,7 @@ def timetz_func(x, type_info):
 
 
 def time_func(x, type_info):
+    """Tests if the string is a valid time"""
     if x == '':
         return True
     try:
@@ -117,6 +131,7 @@ def time_func(x, type_info):
 
 
 def not_implemented(x, type_info):
+    """Default function"""
     return False
 
 
@@ -143,6 +158,7 @@ EXTRA_DATATYPES = [  # can be verified, but not automatically discovered
 
 
 def get_possible_data_types():
+    """Returns a dictionary of the possible datatypes, with a suffix in case there needs more specification (currently only used to house the length of varchars)"""
     return [
         {**dt, 'suffix': None}
         for dt in DATATYPES

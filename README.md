@@ -1,7 +1,12 @@
 Install this package with `pip install simple_redshift_upload`
 
 ## Test
-If you clone this repository, you can test this package by running `python3 tests/run.py`. To run successfully, you need to fill in the credentials in `tests/aws_creds.json`.
+1. Clone this repository
+2. Using the file `aws_account_creds_template.json`, fill in the data and rename the file `aws_account_creds.json`
+3. Run the file `gen_redshift_environment.py --start`
+4. Run the file `tests\run.py`
+5. To remove the Redshift environment after testing, run `gen_redshift_environment.py --end`
+
 
 ## High Level Process
 This package follows the following steps to upload your data to Redshift.
