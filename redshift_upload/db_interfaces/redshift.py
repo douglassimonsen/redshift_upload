@@ -243,7 +243,7 @@ class Interface:
             cursor.execute(query, {'schema_name': self.schema_name, 'table_name': self.table_name})
             return cursor.fetchone()[0] != 0
 
-    def copy_table(self, cursor) -> None:
+    def copy_table(self, cursor, columns) -> None:
         """
         Copies the S3 file(s) to Redshift
         """
@@ -252,7 +252,8 @@ class Interface:
             file_destination=self.full_table_name,
             source=f"s3://{self.aws_info['bucket']}/{self.s3_name}",
             access=self.aws_info['access_key'],
-            secret=self.aws_info['secret_key']
+            secret=self.aws_info['secret_key'],
+            columns=", ".join(columns)
         )
         cursor.execute(query)
 

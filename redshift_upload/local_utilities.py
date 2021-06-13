@@ -140,7 +140,8 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
         for col in source.fieldnames
     }
     for col, col_info in source.predefined_columns.items():
-        col_types[col] = [x for x in col_types[col] if x['type'] == col_info['type']]
+        if col in col_types:
+            col_types[col] = [x for x in col_types[col] if x['type'] == col_info['type']]
 
     non_viable_cols = []
     for row in source.dictrows():
