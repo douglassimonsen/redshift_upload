@@ -80,10 +80,10 @@ def load_source(source: constants.SourceOptions) -> Source:
         log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
         log.debug("Also, if you do not have a header row, you need to set 'header_row' = False")
         if source.endswith(".csv"):
-            f = io.StringIO()  # we need to load the file in memory
-            with open(source, 'r') as f:
-                f.write(f.read())
-            return Source(f)
+            f_out = io.StringIO()  # we need to load the file in memory
+            with open(source, 'r') as f_in:
+                f_out.write(f_in.read())
+            return Source(f_out)
 
         else:
             if isinstance(source, bytes):
@@ -96,11 +96,10 @@ def load_source(source: constants.SourceOptions) -> Source:
         if len(source) == 0:
             raise ValueError("We cannot accept empty lists as a source")
         f = io.StringIO()
-        with open(f, 'w', newline='') as output_file:
-            dict_writer = csv.DictWriter(output_file, source[0].keys())
-            dict_writer.writeheader()
-            dict_writer.writerows(source)
-            return Source(f)
+        dict_writer = csv.DictWriter(f, source[0].keys())
+        dict_writer.writeheader()
+        dict_writer.writerows(source)
+        return Source(f)
 
     elif isinstance(source, pandas.DataFrame):
         f = io.StringIO()
