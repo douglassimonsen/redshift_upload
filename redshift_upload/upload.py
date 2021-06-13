@@ -47,11 +47,11 @@ def upload(
     source = local_utilities.load_source(source)
 
     if not upload_options['skip_checks']:
-        column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
-        source, column_types, fixed_columns = local_utilities.fix_column_types(source, column_types, interface, upload_options['drop_table'])
+        source.column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
+        local_utilities.fix_column_types(source, interface, upload_options['drop_table'])
 
         if not upload_options['drop_table'] and interface.table_exists:
-            redshift_utilities.compare_with_remote(source, column_types, interface)
+            redshift_utilities.compare_with_remote(source, interface)
     else:
         log.info("Skipping data checks")
 
@@ -61,7 +61,7 @@ def upload(
     sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
     interface.load_to_s3(sources)
 
-    redshift_utilities.s3_to_redshift(interface, column_types, upload_options)
+    redshift_utilities.s3_to_redshift(interface, source.column_types, upload_options)
     if not upload_options['skip_views'] and interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     if interface.aws_info.get("records_table") is not None:

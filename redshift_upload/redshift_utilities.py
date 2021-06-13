@@ -6,7 +6,6 @@ import datetime
 import psycopg2
 import psycopg2.sql
 import getpass
-import csv
 from typing import Dict, List
 try:
     import base_utilities
@@ -57,7 +56,7 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interface: redshift.Interface) -> pandas.DataFrame:
+def compare_with_remote(source, interface: redshift.Interface) -> pandas.DataFrame:
     """
     Checks to see if there are any columns in the local table that's not in the database table or vice versa.
     If the column exists in the database and not the local table, it fills that column with Nones.
@@ -67,10 +66,10 @@ def compare_with_remote(source_df: pandas.DataFrame, column_types: List, interfa
     remote_cols = list(interface.get_columns().keys())
     remote_cols_set = set(remote_cols)
 
-    local_cols = set(source_df.fieldnames)
+    local_cols = set(source.fieldnames)
 
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
-        log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {column_types[col]} default null;" for col in local_cols.difference(remote_cols_set)))
+        log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {source.column_types[col][0]} default null;" for col in local_cols.difference(remote_cols_set)))
         raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
 
 
@@ -97,7 +96,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
                     base += f' {opt}'
             return base
 
-        columns = ', '.join(get_col(col_name, col_type) for col_name, col_type in column_types.items())
+        columns = ', '.join(get_col(col_name, col_type[0]) for col_name, col_type in column_types.items())
         log.info("Creating Redshift table")
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 

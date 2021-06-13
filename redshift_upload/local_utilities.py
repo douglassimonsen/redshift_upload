@@ -42,10 +42,10 @@ def chunkify(source, upload_options) -> List[str]:
         f.seek(0)
         return f.read().encode("utf-8")
 
-    rows = list(source.rows())[1:]
-    load_in_parallel = min(upload_options['load_in_parallel'], len(rows))  # cannot have more groups than rows, otherwise it breaks
-    chunk_size = math.ceil(len(rows) / load_in_parallel)
-    return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, len(rows), chunk_size)], load_in_parallel
+    rows = list(source.rows())[1:]  # the first is the header
+    load_in_parallel = min(upload_options['load_in_parallel'], source.num_rows)  # cannot have more groups than rows, otherwise it breaks
+    chunk_size = math.ceil(source.num_rows / load_in_parallel)
+    return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, source.num_rows, chunk_size)], load_in_parallel
 
 
 class Source:
@@ -55,6 +55,8 @@ class Source:
         self.source = f
         self.fieldnames = dict_reader.fieldnames
         self.num_rows = len(list(dict_reader))
+        self.column_types = None
+        self.fixed_columns = None
 
     def rows(self):
         self.source.seek(0)
@@ -67,8 +69,8 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
     source_args and source_kwargs both get passed to the csv.reader, pandas.read_excel, and pandas.read_csv functions
     """
-    if isinstance(source, csv_reader_type):
-            return list(source)
+    if isinstance(source, io.StringIO):
+            return Source(source)
 
     elif isinstance(source, str):
         log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
@@ -88,7 +90,7 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
 
     elif isinstance(source, list):
         if len(source) == 0:
-            raise ValueError("We cannot except empty lists as a source")
+            raise ValueError("We cannot accept empty lists as a source")
         f = io.StringIO()
         with open(f, 'w', newline='') as output_file:
             dict_writer = csv.DictWriter(output_file, source[0].keys())
@@ -104,7 +106,7 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
     raise ValueError("We do not support this type of source")
 
 
-def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: redshift.Interface, drop_table: bool) -> Tuple[pandas.DataFrame, Dict]:  # check what happens ot the dic over multiple uses
+def fix_column_types(source: Source, interface: redshift.Interface, drop_table: bool) -> Tuple[pandas.DataFrame, Dict]:  # check what happens ot the dic over multiple uses
     def clean_column(col: pandas.Series, i: int, cols: List):
         col_count = cols[:i].count(col)
         if col_count != 0:
@@ -112,23 +114,22 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
         return col.replace(".", "_")[:constants.MAX_COLUMN_LENGTH]  # yes, this could cause a collision, but probs not
 
     log.info("Determining proper column types for serialization")
-    columns = df.fieldnames
-    fixed_columns = [x.lower() for x in columns]  # need to lower everyone first, before checking for dups
-    fixed_columns = [clean_column(x, i, columns) for i, x in enumerate(columns)]
+    fixed_columns = [x.lower() for x in source.fieldnames]  # need to lower everyone first, before checking for dups
+    source.fixed_columns = [clean_column(x, i, fixed_columns) for i, x in enumerate(fixed_columns)]
     col_types = {
         col: column_type_utilities.get_possible_data_types()
-        for col in columns
+        for col in source.fieldnames
     }
 
-    for row in df.rows():
+    for row in source.rows():
         for col, data in col_types.items():
             viable_types = [x for x in data if x[1](row[col])]
-            if not viable_types:
+            if not viable_types:  # means that each one failed to parse at least one entry
                 raise ValueError("There are no valid types (not even VARCHAR) for this function!")
             col_types[col] = viable_types
 
-    col_types = {k: v[0] for k, v in col_types.items()}
-    for colname in columns:
+    source.column_types = {k: v[0] for k, v in col_types.items()}
+    for colname in source.fieldnames:
         continue
         if col_type.startswith("VARCHAR") and interface.table_exists and not drop_table:
             remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))  # type: ignore
@@ -144,7 +145,7 @@ def fix_column_types(df: pandas.DataFrame, predefined_columns: Dict, interface: 
                 else:
                     col_type = re.sub(constants.varchar_len_re, f"({max_str_len})", col_type, count=1)
         types.append(col_type)
-    return df, col_types, fixed_columns
+    return source
 
 
 def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:
