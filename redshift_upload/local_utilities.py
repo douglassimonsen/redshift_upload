@@ -109,6 +109,22 @@ def load_source(source: constants.SourceOptions) -> Source:
     raise ValueError("We do not support this type of source")
 
 
+def get_bad_vals(rows, col, type_info, top=5):
+    bad_vals = []
+    bad_indices = []
+    for i, row in enumerate(rows):
+        if not type_info['func'](row[col], None):
+            bad_vals.append(row[col])
+            bad_indices.append(str(i))
+            if len(bad_vals) == top:
+                break
+    log.error(f"We are showing the top {len(bad_vals)} non-conforming values for column \"{col}\" (type: {type_info['type']})")
+    log.error(f"The improper values are: {', '.join(bad_vals)}")
+    log.error(f"The improper rows are: {', '.join(bad_indices)}")
+    if len(bad_vals) < top:
+        log.error("There are no other bad values for this column")
+
+
 def fix_column_types(source: Source, interface: redshift.Interface, drop_table: bool) -> None:  # check what happens to the dict over multiple uses
     def clean_column(col: str, i: int, cols: List):
         col_count = cols[:i].count(col)
@@ -126,14 +142,21 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
     for col, col_info in source.predefined_columns.items():
         col_types[col] = [x for x in col_types[col] if x['type'] == col_info['type']]
 
+    non_viable_cols = []
     for row in source.dictrows():
         for col, data in col_types.items():
             viable_types = [x for x in data if x['func'](row[col], x)]
             if not viable_types:  # means that each one failed to parse at least one entry
-                raise ValueError("There are no valid types (not even VARCHAR) for this function!")
+                if col in source.predefined_columns:  # means that the new data doesn't match the old
+                    get_bad_vals(list(source.dictrows()), col, [x for x in column_type_utilities.get_possible_data_types() if x['type'] == source.predefined_columns[col]['type']][0])  # TODO: iterate over rows just once, rather than once per bad col
+                non_viable_cols.append(col)
             col_types[col] = viable_types
 
-    source.column_types = {k: v[0] for k, v in col_types.items()}
+    if non_viable_cols:
+        log.error(f"The following columns could not be parsed: {', '.join(non_viable_cols)}. Aborting now")
+        raise ValueError("Some columns could not match to a valid Redshift column type")
+
+    source.column_types = {k: v[0] for k, v in col_types.items()}  # we want the most specialized possible type for each column
     for colname, col_info in source.column_types.items():
         if col_info['type'] == "VARCHAR" and interface.table_exists and not drop_table and colname in source.predefined_columns:
             if col_info['suffix'] > source.predefined_columns[colname]['suffix']:

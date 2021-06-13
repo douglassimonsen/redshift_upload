@@ -100,13 +100,15 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
             base = psycopg2.sql.SQL("").join([
                 psycopg2.sql.Identifier(col_name),
             ]).as_string(cursor)  # for some reason, this is the only way to get 'a b' -> '"a b"'
-            base += f' {col_type}'
+            base += f" {col_type['type']}"
+            if col_type['type'] == 'VARCHAR' and col_type['suffix'] is not None:
+                base += f"({col_type['suffix']})"
             for opt in ['distkey', 'sortkey']:
                 if upload_options[opt] == col_name:
                     base += f' {opt}'
             return base
 
-        columns = ', '.join(get_col(col_name, col_type['type']) for col_name, col_type in column_types.items())
+        columns = ', '.join(get_col(col_name, col_type) for col_name, col_type in column_types.items())
         log.info("Creating Redshift table")
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 
