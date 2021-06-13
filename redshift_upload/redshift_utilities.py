@@ -7,10 +7,10 @@ import psycopg2.sql
 import getpass
 from typing import Dict, List
 try:
-    import base_utilities
+    import base_utilities, column_type_utilities
     from db_interfaces import redshift
 except ModuleNotFoundError:
-    from . import base_utilities
+    from . import base_utilities, column_type_utilities
     from .db_interfaces import redshift
 import logging
 log = logging.getLogger("redshift_utilities")
@@ -41,15 +41,26 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     Formats the simple column type format {column: type} to {column: {"type": type}}
     Also gets column information from existing db table, if one is not dropping the table
     """
+    def parse_to_dict(str_col):
+        if not str_col.startswith("VARCHAR"):
+            return {
+                "type": str_col,
+                "suffix": None
+            }
+        return {
+            'type': 'VARCHAR',
+            'suffix': int(str_col[8:-1])
+        }
+
     def convert_column_type_structure(columns):
         for col, typ in columns.items():
             if not isinstance(typ, dict):
-                columns[col] = {"type": typ}
+                columns[col] = parse_to_dict(typ)
         return columns
 
     columns = convert_column_type_structure(columns)
     if upload_options['drop_table'] is False:
-        existing_columns = interface.get_columns()
+        existing_columns = {k: parse_to_dict(v) for k, v in interface.get_columns().items()}
     else:
         existing_columns = {}
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
@@ -68,7 +79,7 @@ def compare_with_remote(source, interface: redshift.Interface) -> None:
     local_cols = set(source.fieldnames)
 
     if not local_cols.issubset(remote_cols_set):  # means there are new columns in the local data
-        log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {source.column_types[col][0]} default null;" for col in local_cols.difference(remote_cols_set)))
+        log.error("If these new columns are not a mistake, you may add them to the table by running:\n" + "".join(f"\nAlter table {interface.full_table_name} add column {col} {source.column_types[col]['type']} default null;" for col in local_cols.difference(remote_cols_set)))
         raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
 
 
@@ -95,7 +106,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
                     base += f' {opt}'
             return base
 
-        columns = ', '.join(get_col(col_name, col_type[0]) for col_name, col_type in column_types.items())
+        columns = ', '.join(get_col(col_name, col_type['type']) for col_name, col_type in column_types.items())
         log.info("Creating Redshift table")
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 

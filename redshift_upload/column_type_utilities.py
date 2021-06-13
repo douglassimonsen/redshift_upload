@@ -1,7 +1,7 @@
 import datetime
 
 
-def date_func(x):
+def date_func(x, type_info):
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d')
         # TODO implement min/max valid range
@@ -10,7 +10,7 @@ def date_func(x):
         return False
 
 
-def timestamptz_func(x):
+def timestamptz_func(x, type_info):
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S%z')
         return True
@@ -18,7 +18,7 @@ def timestamptz_func(x):
         return False
 
 
-def timestamp_func(x):
+def timestamp_func(x, type_info):
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
         return True
@@ -26,7 +26,7 @@ def timestamp_func(x):
         return False
 
 
-def smallint_func(x):
+def smallint_func(x, type_info):
     try:
         x = int(x)
         assert -32768 <= x <= 32767
@@ -35,7 +35,7 @@ def smallint_func(x):
         return False
 
 
-def int_func(x):
+def int_func(x, type_info):
     try:
         x = int(x)
         assert -2147483648 <= x <= +2147483647
@@ -44,7 +44,7 @@ def int_func(x):
         return False
 
 
-def bigint_func(x):
+def bigint_func(x, type_info):
     try:
         x = int(x)
         assert -9223372036854775808 <= x <= 9223372036854775807
@@ -53,7 +53,7 @@ def bigint_func(x):
         return False
 
 
-def double_precision_func(x):
+def double_precision_func(x, type_info):
     try:
         float(x)
         return True
@@ -61,7 +61,7 @@ def double_precision_func(x):
         return False
 
 
-def boolean_func(x):
+def boolean_func(x, type_info):
     bool_opts = [
         '0',
         '1',
@@ -71,35 +71,40 @@ def boolean_func(x):
     return str(x) in bool_opts
 
 
-def varchar_func(x):
-    return len(str(x).encode("utf-8")) < 65536
+def varchar_func(x, type_info):
+    row_len = len(str(x).encode("utf-8"))
+    type_info['suffix'] = max(row_len, type_info['suffix'] or 1)
+    return row_len < 65536
 
 
-def not_implemented(x):
+def not_implemented(x, type_info):
     return False
 
 
-DATATYPES = {
-    'DATE': date_func,  # date should come before timestamps
-    'TIMESTAMPTZ': timestamptz_func,
-    'TIMESTAMP': timestamp_func,
-    'SMALLINT': smallint_func,
-    'INTEGER': int_func,
-    'BIGINT': bigint_func,
-    'DOUBLE PRECISION': double_precision_func,
-    'BOOLEAN': boolean_func,
-    'VARCHAR': varchar_func,
-    # 'TIME': not_implemented,
-    # 'TIMETZ': not_implemented,
-}
-EXTRA_DATATYPES = {  # can be verified, but not automatically discovered
-    'GEOMETRY': not_implemented,
-    'HLLSKETCH': not_implemented,
-    'CHAR': not_implemented,
-    'DECIMAL': not_implemented,
-    'REAL': not_implemented,
-}
+DATATYPES = [
+    {'type': 'DATE', 'func': date_func},  # date should come before timestamps
+    {'type': 'TIMESTAMPTZ', 'func': timestamptz_func},
+    {'type': 'TIMESTAMP', 'func': timestamp_func},
+    {'type': 'SMALLINT', 'func': smallint_func},
+    {'type': 'INTEGER', 'func': int_func},
+    {'type': 'BIGINT', 'func': bigint_func},
+    {'type': 'DOUBLE PRECISION', 'func': double_precision_func},
+    {'type': 'BOOLEAN', 'func': boolean_func},
+    {'type': 'VARCHAR', 'func': varchar_func},
+    # {'type': 'TIME', 'func': not_implemented},
+    # {'type': 'TIMETZ', 'func': not_implemented},
+]
+EXTRA_DATATYPES = [  # can be verified, but not automatically discovered
+    {'type': 'GEOMETRY', 'func': not_implemented},
+    {'type': 'HLLSKETCH', 'func': not_implemented},
+    {'type': 'CHAR', 'func': not_implemented},
+    {'type': 'DECIMAL', 'func': not_implemented},
+    {'type': 'REAL', 'func': not_implemented},
+]
 
 
 def get_possible_data_types():
-    return list(DATATYPES.items())
+    return [
+        {**dt, 'suffix': None}
+        for dt in DATATYPES
+    ]

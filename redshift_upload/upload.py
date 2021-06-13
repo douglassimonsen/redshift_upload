@@ -47,7 +47,7 @@ def upload(
     source = local_utilities.load_source(source)
 
     if not upload_options['skip_checks']:
-        source.column_types = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
+        source.predefined_columns = redshift_utilities.get_defined_columns(column_types, interface, upload_options)
         local_utilities.fix_column_types(source, interface, upload_options['drop_table'])
 
         if not upload_options['drop_table'] and interface.table_exists:

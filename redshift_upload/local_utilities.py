@@ -54,6 +54,7 @@ class Source:
         self.source = f
         self.fieldnames = dict_reader.fieldnames
         self.num_rows = len(list(dict_reader))
+        self.predefined_columns = None
         self.column_types = None
         self.fixed_columns = None
 
@@ -119,31 +120,23 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
         col: column_type_utilities.get_possible_data_types()
         for col in source.fieldnames
     }
+    for col, col_info in source.predefined_columns.items():
+        col_types[col] = [x for x in col_types[col] if x['type'] == col_info['type']]
 
     for row in source.rows():
         for col, data in col_types.items():
-            viable_types = [x for x in data if x[1](row[col])]
+            viable_types = [x for x in data if x['func'](row[col], x)]
             if not viable_types:  # means that each one failed to parse at least one entry
                 raise ValueError("There are no valid types (not even VARCHAR) for this function!")
             col_types[col] = viable_types
 
     source.column_types = {k: v[0] for k, v in col_types.items()}
-    for colname in source.fieldnames:
-        continue
-        if col_type.startswith("VARCHAR") and interface.table_exists and not drop_table:
-            remote_varchar_length = int(re.search(constants.varchar_len_re, col_type).group(1))  # type: ignore
-            bad_strings = df[colname][df[colname].astype(str).str.len() > remote_varchar_length]
-            bad_strings_formatted = "\n".join(f"{x[:200]} <- (length: {len(str(x))}, index: {i})" for x, i in zip(bad_strings.iloc[:5], bad_strings.iloc[:5].index))
-            max_str_len = max(bad_strings.astype(str).str.len(), default=-1)
-            if bad_strings.shape[0] > 0:
-                if not interface.expand_varchar_column(colname, max_str_len):
+    for colname, col_info in source.column_types.items():
+        if col_info['type'] == "VARCHAR" and interface.table_exists and not drop_table and colname in source.predefined_columns:
+            if col_info['suffix'] > source.predefined_columns[colname]['suffix']:
+                if not interface.expand_varchar_column(colname, col_info['suffix']):
                     log.error(f"Unable to load data to table: {interface.full_table_name}")
-                    log.error(f'The "{colname}" column had {bad_strings.shape[0]} string(s) longer than the table can support (max length: {max_str_len})')
-                    log.error("These are the first five offending strings:\n" + bad_strings_formatted)
                     raise ValueError("Failed to expand the varchar column enough to accomodate the new data.")
-                else:
-                    col_type = re.sub(constants.varchar_len_re, f"({max_str_len})", col_type, count=1)
-        types.append(col_type)
 
 
 def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:

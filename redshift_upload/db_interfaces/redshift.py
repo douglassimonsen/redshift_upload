@@ -74,27 +74,30 @@ class Interface:
         """
         Gets columns and types from PG_TABLE_DEF
         """
-        def type_mapping(t) -> str:
-            """
-            basing off of https://www.flydata.com/blog/redshift-supported-data-types/
-            """
-            if "char" in t or t == "text":
-                word_len = "".join(c for c in t if c.isnumeric())
-                if word_len != "":
-                    return f"varchar({word_len})"
-                else:
-                    return "varchar"
-            if t == "date":
-                return "date"
-            if "timestamp" in t:
-                return "timestamp"
-            if t.startswith("bool"):
-                return "boolean"
-            if "int" in t:
-                return "bigint"
-            if t == "double precision" or "numeric" in t:
-                return "double precision"
-            raise ValueError(f"Unsupported type: {t}")
+
+        alias_mapping = {
+            'INT2': 'SMALLINT', 
+            'INT': 'INTEGER', 
+            'INT4': 'INTEGER', 
+            'INT8': 'BIGINT', 
+            'NUMERIC': 'DECIMAL', 
+            'FLOAT4': 'REAL', 
+            'BOOL': 'BOOLEAN', 
+            'CHARACTER VARYING': 'VARCHAR',  # this must come before CHARACTER, otherwise the process returns wrong
+            'NVARCHAR': 'VARCHAR', 
+            'TEXT': 'VARCHAR', 
+            'CHARACTER': 'CHAR', 
+            'NCHAR': 'CHAR', 
+            'BPCHAR': 'CHAR', 
+            'TIMESTAMP WITHOUT TIME ZONE': 'TIMESTAMP', 
+            'TIMESTAMP WITH TIME ZONE': 'TIMESTAMPTZ'
+        }
+
+        def dealias(alias):
+            alias = alias.upper()
+            for k, v in alias_mapping.items():
+                alias = alias.replace(k, v)
+            return alias
 
         query = '''
         set search_path to %(schema)s;
@@ -103,7 +106,7 @@ class Interface:
         '''
         with self.get_db_conn().cursor() as cursor:
             cursor.execute(query, {'schema': self.schema_name, 'table_name': self.table_name})
-            return {col: {"type": type_mapping(t)} for col, t in cursor.fetchall()}
+            return {col: dealias(t) for col, t in cursor.fetchall()}
 
     def get_dependent_views(self) -> List[Dict]:
         """
