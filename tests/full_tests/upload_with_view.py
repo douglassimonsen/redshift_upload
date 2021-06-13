@@ -11,29 +11,30 @@ with base_utilities.change_directory():
         aws_creds = json.load(f)
 today = datetime.datetime.today()
 today_date = today.date()
-df_int = pandas.DataFrame([{"a": 1}, {"a": 2}, {"a": 3}])
-df_float = pandas.DataFrame([{"a": 1.0}, {"a": 2.1}, {"a": 3.0}])
-df_dt = pandas.DataFrame([{"a": today}, {"a": today}, {"a": None}])
-df_date = pandas.DataFrame([{"a": today_date}, {"a": today_date}, {"a": None}])
-df_bool = pandas.DataFrame([{"a": True}, {"a": False}, {"a": None}])
-df_text = pandas.DataFrame([{"a": "hello"}, {"a": "Goodbye"}, {"a": None}])
+df_int = [{"a": 1}, {"a": 2}, {"a": 3}]
+df_float = [{"a": 1.0}, {"a": 2.1}, {"a": 3.0}]
+df_dt = [{"a": today.strftime("%Y-%m-%d %H:%M:%S")}, {"a": today.strftime("%Y-%m-%d %H:%M:%S")}, {"a": None}]
+df_date = [{"a": today_date}, {"a": today_date}, {"a": None}]
+df_bool = [{"a": False}, {"a": True}, {"a": None}]
+df_text = [{"a": "Goodbye"}, {"a": "hello"}, {"a": None}]
+
+
+def dt_stringer(df):
+    return df.astype(str).replace({'NaT': None})
 
 
 @pytest.mark.parametrize(
-    "df",
+    "df,formatter",
     [
-        df_int,
-        df_float,
-        df_dt,
-        df_date,
-        df_bool,
-        df_text,
+        (df_int, None),
+        (df_float, None),
+        (df_dt, dt_stringer),
+        (df_date, None),
+        (df_bool, None),
+        (df_text, None),
     ],
 )
-def test_upload_with_view(df):
-    df = df.copy()
-    df["order_col"] = df.index
-
+def test_upload_with_view(df, formatter):
     interface = upload(
         source=df.copy(),  # needed for the comparison later
         schema_name="public",
@@ -56,9 +57,12 @@ def test_upload_with_view(df):
     )
 
     with interface.get_db_conn() as conn:
-        df_out = pandas.read_sql(f"select * from {interface.schema_name}.{interface.table_name}_view2 order by order_col", conn)
-    assert df.equals(df_out) or (df == df_out).all().iat[0]
+        df_out = pandas.read_sql(f"select * from {interface.schema_name}.{interface.table_name}_view2 order by a", conn)
+    if formatter is not None:
+        df_out = formatter(df_out)
+    df_out = df_out.to_dict("records")
+    assert str(df) == str(df_out)
 
 
 if __name__ == '__main__':
-    test_upload_with_view(df_int)
+    test_upload_with_view(df_dt, dt_stringer)
