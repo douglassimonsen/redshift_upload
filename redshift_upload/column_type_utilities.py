@@ -96,6 +96,26 @@ def varchar_func(x, type_info):
     return row_len < 65536
 
 
+def timetz_func(x, type_info):
+    if x == '':
+        return True
+    try:
+        datetime.datetime.strptime(x, '%H:%M:%S%z')
+        return True
+    except:
+        return False
+
+
+def time_func(x, type_info):
+    if x == '':
+        return True
+    try:
+        datetime.datetime.strptime(x, '%H:%M:%S')
+        return True
+    except:
+        return False
+
+
 def not_implemented(x, type_info):
     return False
 
@@ -110,8 +130,8 @@ DATATYPES = [
     {'type': 'DOUBLE PRECISION', 'func': double_precision_func},
     {'type': 'BOOLEAN', 'func': boolean_func},
     {'type': 'VARCHAR', 'func': varchar_func},
-    # {'type': 'TIME', 'func': not_implemented},
-    # {'type': 'TIMETZ', 'func': not_implemented},
+    {'type': 'TIMETZ', 'func': timetz_func},
+    {'type': 'TIME', 'func': time_func},
 ]
 EXTRA_DATATYPES = [  # can be verified, but not automatically discovered
     {'type': 'GEOMETRY', 'func': not_implemented},
