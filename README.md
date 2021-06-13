@@ -6,6 +6,8 @@ Install this package with `pip install simple_redshift_upload`
 3. Run the file `gen_redshift_environment.py --start`
 4. Run the file `tests\run.py`
 5. To remove the Redshift environment after testing, run `gen_redshift_environment.py --end`
+6. To test mypy, run the command `mypy -p redshift_upload`
+    1. There should be 10 errors about Optional Dictionaries not being indexable in upload.py. Those are ignorable.
 
 
 ## High Level Process

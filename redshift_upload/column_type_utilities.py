@@ -1,83 +1,84 @@
 import datetime
+from typing import Dict, List
 
 
-def date_func(x, type_info):
+def date_func(x: str, type_info: Dict):
     """Tests if the string is a valid date"""
     # Timestamp must be between 4713-01-01 BC and 5874897-12-31. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
-        x = datetime.datetime.strptime(x, '%Y-%m-%d')
+        datetime.datetime.strptime(x, '%Y-%m-%d')
         # TODO implement min/max valid range
         return True
     except:
         return False
 
 
-def timestamptz_func(x, type_info):
+def timestamptz_func(x: str, type_info: Dict):
     """Tests if the string is a valid timestamptz"""
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
-        x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S%z')
+        datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S%z')
         return True
     except:
         return False
 
 
-def timestamp_func(x, type_info):
+def timestamp_func(x: str, type_info: Dict):
     """Tests if the string is a valid timestamp"""
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
     try:
-        x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+        datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
         return True
     except:
         return False
 
 
-def smallint_func(x, type_info):
+def smallint_func(x: str, type_info: Dict):
     """Tests if the string is a valid smallint"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')
     try:
-        x = int(x)
-        assert -32768 <= x <= 32767
+        y = int(x)
+        assert -32768 <= y <= 32767
         return True
     except:
         return False
 
 
-def int_func(x, type_info):
+def int_func(x: str, type_info: Dict):
     """Tests if the string is a valid int"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')
     try:
-        x = int(x)
-        assert -2147483648 <= x <= +2147483647
+        y = int(x)
+        assert -2147483648 <= y <= +2147483647
         return True
     except:
         return False
 
 
-def bigint_func(x, type_info):
+def bigint_func(x: str, type_info: Dict):
     """Tests if the string is a valid bigint"""
     if x == '':
         return True
     x = x.rstrip('0').rstrip('.')  # rstrip would take 1.1.0.0 -> 1.1, so we do it in two steps. Technically, this would take 1234..0 -> 1234, but that's a problem for future me
     try:
-        x = int(x)
-        assert -9223372036854775808 <= x <= 9223372036854775807
+        y = int(x)
+        assert -9223372036854775808 <= y <= 9223372036854775807
         return True
     except:
         return False
 
 
-def double_precision_func(x, type_info):
+def double_precision_func(x: str, type_info: Dict):
     """Tests if the string is a valid double precision"""
     if x == '':
         return True
@@ -88,7 +89,7 @@ def double_precision_func(x, type_info):
         return False
 
 
-def boolean_func(x, type_info):
+def boolean_func(x: str, type_info: Dict):
     """Tests if the string is a valid boolean"""
     if x == '':
         return True
@@ -101,14 +102,14 @@ def boolean_func(x, type_info):
     return str(x).lower() in bool_opts
 
 
-def varchar_func(x, type_info):
+def varchar_func(x: str, type_info: Dict):
     """Tests if the string is a string less than 65536 bytes"""
     row_len = len(str(x).encode("utf-8"))
     type_info['suffix'] = max(row_len, type_info['suffix'] or 1)
     return row_len < 65536
 
 
-def timetz_func(x, type_info):
+def timetz_func(x: str, type_info: Dict):
     """Tests if the string is a valid timetz"""
     if x == '':
         return True
@@ -119,7 +120,7 @@ def timetz_func(x, type_info):
         return False
 
 
-def time_func(x, type_info):
+def time_func(x: str, type_info: Dict):
     """Tests if the string is a valid time"""
     if x == '':
         return True
@@ -157,7 +158,7 @@ EXTRA_DATATYPES = [  # can be verified, but not automatically discovered
 ]
 
 
-def get_possible_data_types():
+def get_possible_data_types() -> List[Dict]:
     """Returns a dictionary of the possible datatypes, with a suffix in case there needs more specification (currently only used to house the length of varchars)"""
     return [
         {**dt, 'suffix': None}

@@ -1,17 +1,17 @@
 import json
 import os
-import toposort
+import toposort  # type: ignore
 import datetime
-import psycopg2
-import psycopg2.sql
+import psycopg2  # type: ignore
+import psycopg2.sql  # type: ignore
 import getpass
-from typing import Dict, List
+from typing import Dict, List, Union
 try:
-    import base_utilities, column_type_utilities
-    from db_interfaces import redshift
+    import base_utilities, local_utilities  # type: ignore
+    from db_interfaces import redshift  # type: ignore
 except ModuleNotFoundError:
-    from . import base_utilities, column_type_utilities
-    from .db_interfaces import redshift
+    from . import base_utilities, local_utilities
+    from .db_interfaces import redshift  # type: ignore
 import logging
 log = logging.getLogger("redshift_utilities")
 
@@ -41,24 +41,22 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     Formats the simple column type format {column: type} to {column: {"type": type}}
     Also gets column information from existing db table, if one is not dropping the table
     """
-    def parse_to_dict(str_col):
-        if not str_col.startswith("VARCHAR"):
+    def parse_to_dict(col: Union[str, Dict]) -> Dict:
+        if isinstance(col, dict):
+            return col
+
+        if not col.startswith("VARCHAR"):
             return {
-                "type": str_col,
+                "type": col,
                 "suffix": None
             }
+
         return {
             'type': 'VARCHAR',
-            'suffix': int(str_col[8:-1])
+            'suffix': int(col[8:-1])
         }
 
-    def convert_column_type_structure(columns):
-        for col, typ in columns.items():
-            if not isinstance(typ, dict):
-                columns[col] = parse_to_dict(typ)
-        return columns
-
-    columns = convert_column_type_structure(columns)
+    columns = {col: parse_to_dict(typ) for col, typ in columns.items()}
     if upload_options['drop_table'] is False:
         existing_columns = {k: parse_to_dict(v) for k, v in interface.get_columns().items()}
     else:
@@ -66,7 +64,7 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def compare_with_remote(source, interface: redshift.Interface) -> None:
+def compare_with_remote(source: local_utilities.Source, interface: redshift.Interface) -> None:
     """
     Checks to see if there are any columns in the local table that's not in the database table or vice versa.
     If the column exists in the database and not the local table, it fills that column with Nones.
@@ -83,19 +81,19 @@ def compare_with_remote(source, interface: redshift.Interface) -> None:
         raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
 
 
-def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict, source) -> None:
+def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict, source: local_utilities.Source) -> None:
     """
     Copies the data from S3 to Redshift. Also drops, creates, truncates, and grants access (if applicable)
     """
-    def delete_table():
+    def delete_table() -> None:
         log.info("Dropping Redshift table")
         cursor.execute(f'drop table if exists {interface.full_table_name} cascade')
 
-    def truncate_table():
+    def truncate_table() -> None:
         log.info("Truncating Redshift table")
         cursor.execute(f'truncate {interface.full_table_name}')
 
-    def create_table():
+    def create_table() -> None:
         def get_col(col_name, col_type):
             base = psycopg2.sql.SQL("").join([
                 psycopg2.sql.Identifier(col_name),
@@ -112,7 +110,7 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
         log.info("Creating Redshift table")
         cursor.execute(f'create table if not exists {interface.full_table_name} ({columns}) diststyle {upload_options["diststyle"]}')
 
-    def grant_access():
+    def grant_access() -> None:
         grant = f"GRANT SELECT ON {interface.full_table_name} TO {', '.join(upload_options['grant_access'])}"
         log.info("Granting permissions on Redshift table")
         cursor.execute(grant)
@@ -193,7 +191,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                 log.warning(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
-def record_upload(interface: redshift.Interface, source) -> None:
+def record_upload(interface: redshift.Interface, source: local_utilities.Source) -> None:
     """
     Records basic information about the upload session to a table.
     Happens at the end so a failure here won't impact the overall upload.

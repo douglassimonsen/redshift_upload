@@ -3,7 +3,6 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import local_utilities  # noqa
 from redshift_upload.db_interfaces import dummy  # noqa
-import pandas  # noqa
 import pytest  # noqa
 
 int1_in = [{"a": 1}, {"a": 2}, {"a": 3}]

@@ -1,10 +1,10 @@
 try:
-    from db_interfaces import redshift
-    import local_utilities
-    import redshift_utilities
-    import constants
+    from db_interfaces import redshift  # type: ignore
+    import local_utilities  # type: ignore
+    import redshift_utilities  # type: ignore
+    import constants  # type: ignore
 except ModuleNotFoundError:
-    from .db_interfaces import redshift
+    from .db_interfaces import redshift  # type: ignore
     from . import local_utilities
     from . import redshift_utilities
     from . import constants

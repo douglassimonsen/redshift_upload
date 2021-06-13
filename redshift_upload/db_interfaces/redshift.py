@@ -23,7 +23,7 @@ with base_utilities.change_directory():
 
 
 class Interface:
-    def __init__(self, schema_name, table_name, aws_info) -> None:
+    def __init__(self, schema_name: str, table_name: str, aws_info: Dict) -> None:
         self.name = 'redshift'
         self.aws_info = aws_info
         self.schema_name = schema_name
@@ -70,7 +70,7 @@ class Interface:
             )
         return self._s3_conn
 
-    def get_columns(self) -> Dict[str, Dict[str, str]]:
+    def get_columns(self) -> Dict[str, str]:
         """
         Gets columns and types from PG_TABLE_DEF
         """
@@ -93,7 +93,7 @@ class Interface:
             'TIMESTAMP WITH TIME ZONE': 'TIMESTAMPTZ'
         }
 
-        def dealias(alias):
+        def dealias(alias: str):
             """
             Merges multiple names for the same column type into a single name
             """
@@ -118,7 +118,7 @@ class Interface:
         """
         Returns a list of dictionaries containing information about views, including dependencies and source text
         """
-        def get_view_query(row) -> Dict:
+        def get_view_query(row: Dict) -> Dict:
             view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{row['full_name']}', true) as text"
 
             with self.get_db_conn().cursor() as cursor:
@@ -132,7 +132,7 @@ class Interface:
                 "view_type": row["dependent_kind"],
             }
 
-        def get_grants(schema_name, view_name):
+        def get_grants(schema_name: str, view_name: str):
             """
             Lists the various SELECT grants for a table
             """
@@ -141,7 +141,7 @@ class Interface:
                 grants = ", ".join(x[0] for x in cursor.fetchall())
                 return f"GRANT SELECT ON {schema_name}.{view_name} to {grants}"
 
-        def format_row(row) -> Dict:
+        def format_row(row: List) -> Dict:
             return {
                 'full_name': f"{row[0]}.{row[1]}",
                 'dependency': f"{row[4]}.{row[5]}",
@@ -167,7 +167,7 @@ class Interface:
             dependency_relations.setdefault(row['full_name'], []).append(row['dependency'])
         return [get_view_query(row) for row in dependencies]
 
-    def load_to_s3(self, source_dfs) -> None:
+    def load_to_s3(self, source_dfs: List[bytes]) -> None:
         """
         Loads data to S3, using multiprocessing.pool.Threadpool to speed up process.
         """
@@ -248,7 +248,7 @@ class Interface:
             cursor.execute(query, {'schema_name': self.schema_name, 'table_name': self.table_name})
             return cursor.fetchone()[0] != 0
 
-    def copy_table(self, cursor, columns) -> None:
+    def copy_table(self, cursor: constants.Connection, columns: List[str]) -> None:
         """
         Copies the S3 file(s) to Redshift
         """
@@ -262,7 +262,7 @@ class Interface:
         )
         cursor.execute(query)
 
-    def expand_varchar_column(self, colname, max_str_len) -> bool:
+    def expand_varchar_column(self, colname: str, max_str_len: int) -> bool:
         """
         Attempts to alter a varchar column to be varchar({max_str_len})
         """

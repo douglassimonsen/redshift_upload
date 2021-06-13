@@ -1,22 +1,44 @@
-import pandas
-from typing import List, Dict, Union, Tuple
+import pandas  # type: ignore
+from typing import List, Dict, Tuple, Iterator, Any, Optional
 import logging
-import re
 import sys
 import io
 import csv
 import math
 try:
-    import constants, column_type_utilities
-    from db_interfaces import redshift
+    import constants, column_type_utilities  # type: ignore
+    from db_interfaces import redshift  # type: ignore
 except ModuleNotFoundError:
     from . import constants, column_type_utilities
-    from .db_interfaces import redshift
+    from .db_interfaces import redshift  # type: ignore
 log = logging.getLogger("redshift_utilities")
 csv_reader_type = type(csv.reader(io.StringIO()))  # the actual type is trapped in a compiled binary. See more here: https://stackoverflow.com/questions/46673845/why-is-csv-reader-not-considered-a-class
 
 
-def initialize_logger(log_level) -> None:
+class Source:
+    """
+    A class representing the data to be loaded to Redshift
+    """
+    def __init__(self, f: io.StringIO):
+        f.seek(0)
+        dict_reader = csv.DictReader(f)
+        self.source = f
+        self.fieldnames = dict_reader.fieldnames or []
+        self.num_rows = len(list(dict_reader))
+        self.predefined_columns: Dict = {}
+        self.column_types: Dict = {}
+        self.fixed_columns: List = []
+
+    def dictrows(self):
+        self.source.seek(0)
+        return csv.DictReader(self.source)        
+
+    def rows(self):
+        self.source.seek(0)
+        return csv.reader(self.source)
+
+
+def initialize_logger(log_level: str) -> None:
     """
     Sets up logging for the upload
     """
@@ -30,11 +52,11 @@ def initialize_logger(log_level) -> None:
     log.addHandler(handler)
 
 
-def chunkify(source, upload_options) -> List[str]:
+def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     """
     Breaks the single file into multiple smaller chunks to speed loading into S3 and copying into Redshift
     """
-    def chunk_to_string(chunk):
+    def chunk_to_string(chunk: List[str]) -> bytes:
         f = io.StringIO()
         writer = csv.writer(f)
         writer.writerows(chunk)
@@ -45,29 +67,6 @@ def chunkify(source, upload_options) -> List[str]:
     load_in_parallel = min(upload_options['load_in_parallel'], source.num_rows)  # cannot have more groups than rows, otherwise it breaks
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, source.num_rows, chunk_size)], load_in_parallel
-
-
-class Source:
-    """
-    A class representing the data to be loaded to Redshift
-    """
-    def __init__(self, f: io.StringIO):
-        f.seek(0)
-        dict_reader = csv.DictReader(f)
-        self.source = f
-        self.fieldnames = dict_reader.fieldnames
-        self.num_rows = len(list(dict_reader))
-        self.predefined_columns = None
-        self.column_types = None
-        self.fixed_columns = None
-
-    def dictrows(self):
-        self.source.seek(0)
-        return csv.DictReader(self.source)        
-
-    def rows(self):
-        self.source.seek(0)
-        return csv.reader(self.source)
 
 
 def load_source(source: constants.SourceOptions) -> Source:
@@ -112,7 +111,7 @@ def load_source(source: constants.SourceOptions) -> Source:
     raise ValueError("We do not support this type of source")
 
 
-def get_bad_vals(rows, col, type_info, top=5):
+def get_bad_vals(rows: Iterator[Dict], col: str, type_info: Dict, top: int=5):
     """
     An error logging function to identify the first n values in a column that don't match the predefined type of the column
     """
@@ -161,7 +160,7 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
             viable_types = [x for x in data if x['func'](row[col], x)]
             if not viable_types:  # means that each one failed to parse at least one entry
                 if col in source.predefined_columns:  # means that the new data doesn't match the old
-                    get_bad_vals(list(source.dictrows()), col, [x for x in column_type_utilities.get_possible_data_types() if x['type'] == source.predefined_columns[col]['type']][0])  # TODO: iterate over rows just once, rather than once per bad col
+                    get_bad_vals(source.dictrows(), col, [x for x in column_type_utilities.get_possible_data_types() if x['type'] == source.predefined_columns[col]['type']][0])  # TODO: iterate over rows just once, rather than once per bad col
                 non_viable_cols.append(col)
             col_types[col] = viable_types
 
@@ -178,7 +177,7 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
                     raise ValueError("Failed to expand the varchar column enough to accomodate the new data.")
 
 
-def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:
+def check_coherence(schema_name: str, table_name: str, upload_options: Optional[Dict], aws_info: Optional[Dict]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Checks the upload_options dictionary for incompatible selections. Current incompatible options:
 
