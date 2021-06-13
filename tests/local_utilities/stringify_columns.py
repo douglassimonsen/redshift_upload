@@ -9,6 +9,12 @@ import pytest  # noqa
 df_in = pandas.DataFrame([{'a': 1, 1: 1123123123142}, {'a': 2, 1: 2, 3: 123456}])
 
 
+@pytest.mark.parametrize(
+    "df_in",
+    [
+        df_in
+    ],
+)
 def test_stringify_columns(df_in):
     df_in = local_utilities.load_source(df_in)
     df_in.predefined_columns = {}

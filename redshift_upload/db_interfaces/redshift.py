@@ -95,8 +95,11 @@ class Interface:
 
         def dealias(alias):
             alias = alias.upper()
+            if alias in alias_mapping.values():
+                return alias
             for k, v in alias_mapping.items():
-                alias = alias.replace(k, v)
+                if k in alias:
+                    return alias.replace(k, v) # without this, INT2 -> SMALLINT -> SMALLINTEGER (since the INT gets captured)
             return alias
 
         query = '''
