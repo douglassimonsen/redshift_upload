@@ -238,15 +238,21 @@ class Interface:
         Checks whether the table exists using pg_tables
         """
         query = '''
-        select count(*) as cnt
-        from pg_tables
-        where schemaname = %(schema_name)s
-        and tablename = %(table_name)s
+        select table_type
+        from information_schema.tables
+        where table_schema = %(schema_name)s
+        and table_name = %(table_name)s
         '''
         log.info("Checking if the table exists in Redshift")
         with self.get_db_conn().cursor() as cursor:
             cursor.execute(query, {'schema_name': self.schema_name, 'table_name': self.table_name})
-            return cursor.fetchone()[0] != 0
+            existing_objs = [x[0] for x in cursor.fetchall()]
+            if len(existing_objs) == 0:
+                return False
+            elif len(existing_objs) == 1 and existing_objs[0] == 'BASE TABLE':
+                return True
+            else:
+                raise ValueError(f"There are already other things with the name {self.schema_name}.{self.table_name}: {', '.join(existing_objs)}")
 
     def copy_table(self, cursor: constants.Connection, columns: List[str]) -> None:
         """

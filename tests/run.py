@@ -28,8 +28,12 @@ def main(coverage=False):
         "full_tests/add_column.py",
         "full_tests/column_expansion.py",
         "full_tests/drop_table.py",
+        "full_tests/incompatible_types.py",
         "full_tests/load_from_string.py",
+        # "full_tests/load_to_locked_table.py",  # currently broken
         "full_tests/no_data.py",
+        "full_tests/renamed_columns.py",
+        "full_tests/table_view_name_collision.py",
         "full_tests/truncate_table.py",
         "full_tests/upload_in_parallel.py",
         "full_tests/upload_with_view.py",

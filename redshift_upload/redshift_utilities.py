@@ -117,8 +117,9 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
 
     conn, cursor = interface.get_exclusive_lock()
 
-    if upload_options['drop_table'] or not interface.table_exists:
+    if upload_options['drop_table'] and interface.table_exists:
         delete_table()
+    if upload_options['drop_table'] or not interface.table_exists:
         create_table()
     elif upload_options['truncate_table']:  # we're not going to truncate if the table doesn't exist yet
         truncate_table()
