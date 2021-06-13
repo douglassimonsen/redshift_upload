@@ -2,6 +2,8 @@ import datetime
 
 
 def date_func(x, type_info):
+    if x == '':
+        return True
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d')
         # TODO implement min/max valid range
@@ -11,6 +13,8 @@ def date_func(x, type_info):
 
 
 def timestamptz_func(x, type_info):
+    if x == '':
+        return True
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S%z')
         return True
@@ -19,6 +23,8 @@ def timestamptz_func(x, type_info):
 
 
 def timestamp_func(x, type_info):
+    if x == '':
+        return True
     try:
         x = datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
         return True
@@ -27,6 +33,9 @@ def timestamp_func(x, type_info):
 
 
 def smallint_func(x, type_info):
+    if x == '':
+        return True
+    x = x.rstrip('0').rstrip('.')
     try:
         x = int(x)
         assert -32768 <= x <= 32767
@@ -36,6 +45,9 @@ def smallint_func(x, type_info):
 
 
 def int_func(x, type_info):
+    if x == '':
+        return True
+    x = x.rstrip('0').rstrip('.')
     try:
         x = int(x)
         assert -2147483648 <= x <= +2147483647
@@ -45,6 +57,9 @@ def int_func(x, type_info):
 
 
 def bigint_func(x, type_info):
+    if x == '':
+        return True
+    x = x.rstrip('0').rstrip('.')  # rstrip would take 1.1.0.0 -> 1.1, so we do it in two steps. Technically, this would take 1234..0 -> 1234, but that's a problem for future me
     try:
         x = int(x)
         assert -9223372036854775808 <= x <= 9223372036854775807
@@ -54,6 +69,8 @@ def bigint_func(x, type_info):
 
 
 def double_precision_func(x, type_info):
+    if x == '':
+        return True
     try:
         float(x)
         return True
@@ -62,6 +79,8 @@ def double_precision_func(x, type_info):
 
 
 def boolean_func(x, type_info):
+    if x == '':
+        return True
     bool_opts = [
         '0',
         '1',
