@@ -83,7 +83,7 @@ def compare_with_remote(source, interface: redshift.Interface) -> None:
         raise NotImplementedError("Haven't implemented adding new columns to the remote table yet")
 
 
-def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict) -> None:
+def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_options: Dict, source) -> None:
     """
     Copies the data from S3 to Redshift. Also drops, creates, truncates, and grants access (if applicable)
     """
@@ -123,7 +123,8 @@ def s3_to_redshift(interface: redshift.Interface, column_types: Dict, upload_opt
     elif upload_options['truncate_table']:  # we're not going to truncate if the table doesn't exist yet
         truncate_table()
 
-    interface.copy_table(cursor)
+    if source.num_rows > 0:
+        interface.copy_table(cursor)
 
     # we can't ensure the grant permissions have changed, so we always do it in case
     if upload_options['grant_access']:

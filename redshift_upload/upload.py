@@ -58,15 +58,16 @@ def upload(
     if not upload_options['skip_views'] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
-    interface.load_to_s3(sources)
+    if source.num_rows > 0:
+        sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
+        interface.load_to_s3(sources)
 
-    redshift_utilities.s3_to_redshift(interface, source.column_types, upload_options)
+    redshift_utilities.s3_to_redshift(interface, source.column_types, upload_options, source)
     if not upload_options['skip_views'] and interface.table_exists:  # still need to update those materialized views, so we can't check drop_table here
         redshift_utilities.reinstantiate_views(interface, upload_options['drop_table'], upload_options['grant_access'])
     if interface.aws_info.get("records_table") is not None:
         redshift_utilities.record_upload(interface, source)
-    if upload_options['cleanup_s3']:
+    if upload_options['cleanup_s3'] and source.num_rows > 0:
         interface.cleanup_s3(load_in_parallel)
     log.info(f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!")
     if upload_options["close_on_end"]:
