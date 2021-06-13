@@ -1,6 +1,5 @@
 import json
 import os
-import pandas
 import toposort
 import datetime
 import psycopg2
@@ -56,7 +55,7 @@ def get_defined_columns(columns: Dict, interface: redshift.Interface, upload_opt
     return {**columns, **existing_columns}  # we prioritize existing columns, since they are generally unfixable
 
 
-def compare_with_remote(source, interface: redshift.Interface) -> pandas.DataFrame:
+def compare_with_remote(source, interface: redshift.Interface) -> None:
     """
     Checks to see if there are any columns in the local table that's not in the database table or vice versa.
     If the column exists in the database and not the local table, it fills that column with Nones.
@@ -175,7 +174,7 @@ def reinstantiate_views(interface: redshift.Interface, drop_table: bool, grant_a
                 log.warning(f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}")
 
 
-def record_upload(interface: redshift.Interface, source: pandas.DataFrame) -> None:
+def record_upload(interface: redshift.Interface, source) -> None:
     """
     Records basic information about the upload session to a table.
     Happens at the end so a failure here won't impact the overall upload.

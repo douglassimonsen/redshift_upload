@@ -1,6 +1,5 @@
 import pandas
 from typing import List, Dict, Union, Tuple
-import numpy
 import logging
 import re
 import sys
@@ -63,7 +62,7 @@ class Source:
         return csv.DictReader(self.source)
 
 
-def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.reader]:
+def load_source(source: constants.SourceOptions) -> Source:
     """
     Loads/transforms the source data to simplify data handling for the rest of the program.
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
@@ -106,8 +105,8 @@ def load_source(source: constants.SourceOptions) -> Union[pandas.DataFrame, csv.
     raise ValueError("We do not support this type of source")
 
 
-def fix_column_types(source: Source, interface: redshift.Interface, drop_table: bool) -> Tuple[pandas.DataFrame, Dict]:  # check what happens ot the dic over multiple uses
-    def clean_column(col: pandas.Series, i: int, cols: List):
+def fix_column_types(source: Source, interface: redshift.Interface, drop_table: bool) -> None:  # check what happens to the dict over multiple uses
+    def clean_column(col: str, i: int, cols: List):
         col_count = cols[:i].count(col)
         if col_count != 0:
             col = f"{col}{col_count}"
@@ -145,7 +144,6 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
                 else:
                     col_type = re.sub(constants.varchar_len_re, f"({max_str_len})", col_type, count=1)
         types.append(col_type)
-    return source
 
 
 def check_coherence(schema_name: str, table_name: str, upload_options: Dict, aws_info: Dict) -> Tuple[Dict, Dict]:
