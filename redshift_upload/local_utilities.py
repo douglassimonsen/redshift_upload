@@ -182,8 +182,6 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Optional[
     Checks the upload_options dictionary for incompatible selections. Current incompatible options:
 
     If a distkey or sortkey is set, the diststyle will be set to key (https://docs.aws.amazon.com/redshift/latest/dg/c_choosing_dist_sort.html)
-    If load_as_csv is True, the program cannot check types (type checking is based off a pandas Dataframe) so skip_checks will be set to True
-    If no_header is True and load_as_csv is False, we raise a ValueError because no_header is only used for CSVs
     load_in_parallel must be an integer
     Both schema_name and table_name must be set
     At most one of truncate_table and drop_table can be set to True
@@ -194,12 +192,6 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Optional[
     aws_info = aws_info or {}
     if upload_options['distkey'] or upload_options['sortkey']:
         upload_options['diststyle'] = 'key'
-
-    if upload_options['load_as_csv']:
-        upload_options['skip_checks'] = True
-
-    if upload_options['no_header'] and not upload_options['load_as_csv']:
-        raise ValueError("This parameter is only used when using a CSV to upload")
 
     if not isinstance(upload_options['load_in_parallel'], int):
         raise ValueError("The option load_in_parallel must be an integer")

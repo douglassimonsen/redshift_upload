@@ -14,7 +14,7 @@ def test_load_from_string():
         source=pandas.DataFrame([{"a": "hi"}, {"a": "hi"}]),
         schema_name="public",
         table_name="unit_test_column_expansion",
-        upload_options={"load_as_csv": False, 'load_in_parallel': 2},
+        upload_options={'load_in_parallel': 2},
         aws_info=aws_creds,
         # log_level="WARNING"
     )
@@ -22,7 +22,7 @@ def test_load_from_string():
         source="a\nb\nc\n",
         schema_name="public",
         table_name="unit_test_column_expansion",
-        upload_options={"load_as_csv": True, 'load_in_parallel': 2},
+        upload_options={'load_in_parallel': 2},
         aws_info=aws_creds,
         # log_level="WARNING"
     )
@@ -31,7 +31,7 @@ def test_load_from_string():
             source="load_source.csv",
             schema_name="public",
             table_name="unit_test_column_expansion",
-            upload_options={"load_as_csv": True, 'load_in_parallel': 2},
+            upload_options={'load_in_parallel': 2},
             aws_info=aws_creds,
             # log_level="WARNING"
         )

@@ -47,10 +47,6 @@ skip_views:
 Default: False
 Does not attempt to save/reinstantiate view
 
-load_as_csv:
-Default: False
-Tells the program that the input should be treated as a CSV and should not be converted to a DataFrame
-
 no_header:
 Default: False
 Indicates the CSV has no header row at the beginning. The uploader will otherwise consider every row to be data

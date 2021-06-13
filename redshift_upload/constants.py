@@ -27,7 +27,6 @@ UPLOAD_DEFAULTS = {
     "default_logging": True,
     "skip_checks": False,
     "skip_views": False,
-    "load_as_csv": False,
     "no_header": False,  # indicates the CSV has no header row at the beginning
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
