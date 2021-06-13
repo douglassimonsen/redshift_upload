@@ -58,9 +58,13 @@ class Source:
         self.column_types = None
         self.fixed_columns = None
 
+    def dictrows(self):
+        self.source.seek(0)
+        return csv.DictReader(self.source)        
+
     def rows(self):
         self.source.seek(0)
-        return csv.DictReader(self.source)
+        return csv.reader(self.source)
 
 
 def load_source(source: constants.SourceOptions) -> Source:
@@ -123,7 +127,7 @@ def fix_column_types(source: Source, interface: redshift.Interface, drop_table: 
     for col, col_info in source.predefined_columns.items():
         col_types[col] = [x for x in col_types[col] if x['type'] == col_info['type']]
 
-    for row in source.rows():
+    for row in source.dictrows():
         for col, data in col_types.items():
             viable_types = [x for x in data if x['func'](row[col], x)]
             if not viable_types:  # means that each one failed to parse at least one entry
