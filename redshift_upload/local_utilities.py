@@ -75,7 +75,7 @@ def load_source(source: constants.SourceOptions, upload_options) -> Source:
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
     source_args and source_kwargs both get passed to the csv.reader, pandas.read_excel, and pandas.read_csv functions
     """
-    if isinstance(source, io.StringIO):
+    if isinstance(source, (io.StringIO, io.TextIOWrapper)):  # the second is the type of open(x, 'r')
             return Source(source)
 
     elif isinstance(source, str):
