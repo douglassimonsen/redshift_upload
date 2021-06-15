@@ -28,6 +28,7 @@ UPLOAD_DEFAULTS = {
     "skip_checks": False,
     "on_disk": False,
     "skip_views": False,
+    "node_count": 1,
     "no_header": False,  # indicates the CSV has no header row at the beginning
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"

@@ -56,6 +56,13 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     """
     Breaks the single file into multiple smaller chunks to speed loading into S3 and copying into Redshift
     """
+
+    def ideal_load_count():
+        if upload_options['load_in_parallel']:
+            return upload_options['load_in_parallel']
+        load_count = int(max(1, math.log10(source.num_rows)))  # sort of arbitrary tbh
+        return load_count - (load_count % upload_options['node_count'])  # the slices should ideally be a multiple of the node count, see https://docs.aws.amazon.com/redshift/latest/dg/t_splitting-data-files.html
+
     def chunk_to_string(chunk: List[str]) -> bytes:
         f = io.StringIO()
         writer = csv.writer(f)
@@ -64,7 +71,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         return f.read().encode("utf-8")
 
     rows = list(source.rows())[1:]  # the first is the header
-    load_in_parallel = min(upload_options['load_in_parallel'] or max(1, int(math.log10(source.num_rows))), source.num_rows)  # cannot have more groups than rows, otherwise it breaks
+    load_in_parallel = min(ideal_load_count(), source.num_rows)  # cannot have more groups than rows, otherwise it breaks
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, source.num_rows, chunk_size)], load_in_parallel
 
