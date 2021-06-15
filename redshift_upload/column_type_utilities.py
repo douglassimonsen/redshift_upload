@@ -20,11 +20,13 @@ def timestamptz_func(x: str, type_info: Dict):
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
-    try:
-        datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S%z')
-        return True
-    except:
-        return False
+    for fmt in ('%Y-%m-%d %:H:%M:%S%z', '%Y-%m-%d %H:%M:%S%f%z', '%Y-%m-%d %H:%M%z'):
+        try:
+            datetime.datetime.strptime(x, fmt)
+            return True
+        except:
+            pass
+    return False
 
 
 def timestamp_func(x: str, type_info: Dict):
@@ -32,11 +34,13 @@ def timestamp_func(x: str, type_info: Dict):
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == '':
         return True
-    try:
-        datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
-        return True
-    except:
-        return False
+    for fmt in ('%Y-%m-%d %:H:%M:%S', '%Y-%m-%d %H:%M:%S%f', '%Y-%m-%d %H:%M'):
+        try:
+            datetime.datetime.strptime(x, fmt)
+            return True
+        except:
+            pass
+    return False
 
 
 def smallint_func(x: str, type_info: Dict):
