@@ -34,7 +34,8 @@ def upload(
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
     upload_options, aws_info = local_utilities.check_coherence(schema_name, table_name, upload_options, aws_info)
-
+    if upload_options['on_disk'] and not (isinstance(source, str) and source.endswith(".csv")):
+        raise ValueError("The on_disk parameter only works when you supply a path to a CSV")
     if upload_options['default_logging']:
         local_utilities.initialize_logger(log_level)
 
@@ -44,7 +45,7 @@ def upload(
     interface = interface or redshift.Interface(schema_name, table_name, aws_info)
     if not interface.table_exists and upload_options['skip_checks']:
         raise ValueError("The table does not yet exist, you need the checks to determine what column types to use")
-    source = local_utilities.load_source(source)
+    source = local_utilities.load_source(source, upload_options)
 
     if not upload_options['skip_checks']:
         source.predefined_columns = redshift_utilities.get_defined_columns(column_types, interface, upload_options)

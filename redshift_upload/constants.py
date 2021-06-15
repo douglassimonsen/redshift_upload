@@ -23,9 +23,10 @@ UPLOAD_DEFAULTS = {
     "diststyle": "even",
     "distkey": None,
     "sortkey": None,
-    "load_in_parallel": 1,  # count of parallel files
+    "load_in_parallel": None,  # count of parallel files
     "default_logging": True,
     "skip_checks": False,
+    "on_disk": False,
     "skip_views": False,
     "no_header": False,  # indicates the CSV has no header row at the beginning
 }

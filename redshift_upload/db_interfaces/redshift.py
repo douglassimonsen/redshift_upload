@@ -259,12 +259,16 @@ class Interface:
         Copies the S3 file(s) to Redshift
         """
         log.info("Copying table from S3 to Redshift")
+        if columns:
+            columns = "(" + ", ".join(columns) + ")"
+        else:  # this occurs when skip_checks is True
+            columns = ''
         query = copy_table_query.format(
             file_destination=self.full_table_name,
             source=f"s3://{self.aws_info['bucket']}/{self.s3_name}",
             access=self.aws_info['access_key'],
             secret=self.aws_info['secret_key'],
-            columns=", ".join(columns)
+            columns=columns
         )
         cursor.execute(query)
 

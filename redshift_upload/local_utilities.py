@@ -64,12 +64,12 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         return f.read().encode("utf-8")
 
     rows = list(source.rows())[1:]  # the first is the header
-    load_in_parallel = min(upload_options['load_in_parallel'], source.num_rows)  # cannot have more groups than rows, otherwise it breaks
+    load_in_parallel = min(upload_options['load_in_parallel'] or max(1, int(math.log10(source.num_rows))), source.num_rows)  # cannot have more groups than rows, otherwise it breaks
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, source.num_rows, chunk_size)], load_in_parallel
 
 
-def load_source(source: constants.SourceOptions) -> Source:
+def load_source(source: constants.SourceOptions, upload_options) -> Source:
     """
     Loads/transforms the source data to simplify data handling for the rest of the program.
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
@@ -82,10 +82,14 @@ def load_source(source: constants.SourceOptions) -> Source:
         log.debug("If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline")
         log.debug("Also, if you do not have a header row, you need to set 'header_row' = False")
         if source.endswith(".csv"):
-            f_out = io.StringIO()  # we need to load the file in memory
-            with open(source, 'r') as f_in:
+            f_in = open(source, 'r')
+            if upload_options['on_disk']:
+                return Source(f_in)
+            else:
+                f_out = io.StringIO()  # we need to load the file in memory
                 f_out.write(f_in.read())
-            return Source(f_out)
+                f_in.close()
+                return Source(f_out)
 
         else:
             if isinstance(source, bytes):
@@ -193,7 +197,7 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Optional[
     if upload_options['distkey'] or upload_options['sortkey']:
         upload_options['diststyle'] = 'key'
 
-    if not isinstance(upload_options['load_in_parallel'], int):
+    if upload_options['load_in_parallel'] is not None and not isinstance(upload_options['load_in_parallel'], int):
         raise ValueError("The option load_in_parallel must be an integer")
 
     if not schema_name or not table_name:

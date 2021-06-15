@@ -32,8 +32,8 @@ Default: None
 The column to sort the table on
 
 load_in_parallel:
-Default: 1
-The number of s3 files to seperate the file into. See more for why we do this here: https://docs.aws.amazon.com/redshift/latest/dg/t_splitting-data-files.html
+Default: None
+The number of s3 files to seperate the file into. If None, defaults to sqrt of the num_rows. See more for why we do this here: https://docs.aws.amazon.com/redshift/latest/dg/t_splitting-data-files.html
 
 default_logging:
 Default: True
