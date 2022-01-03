@@ -5,11 +5,34 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.1.0.0/16
+  IGW:
+    Type: AWS::EC2::InternetGateway
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  ExternalRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RouteTable
   Subnet:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !GetAtt VPC.CidrBlock
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
+  SubnetRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -40,8 +63,8 @@ Resources:
       DBName: test
       MasterUsername: admin
       MasterUserPassword: Password1
+      PubliclyAccessible: true
       NodeType: dc2.large
       ClusterSubnetGroupName: !Ref ClusterSubnetGroup
       VpcSecurityGroupIds:
         - !Ref SecurityGroup
-      
