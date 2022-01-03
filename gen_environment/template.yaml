@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: An environment to test the upload library
+Resources: 
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.1.0.0/16
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !GetAtt VPC.CidrBlock
+      VpcId: !Ref VPC 
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: A security group for the Redshift Cluster
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: -1
+          ToPort: -1
+          IpProtocol: -1
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 5439
+          ToPort: 5439
+          IpProtocol: -1
+  Store:
+    Type: AWS::S3::Bucket
+  ClusterSubnetGroup:
+    Type: AWS::Redshift::ClusterSubnetGroup
+    Properties:
+      Description: Idk what this is for tbh
+      SubnetIds: 
+        - !Ref Subnet
+  Cluster:
+    Type: AWS::Redshift::Cluster
+    Properties:
+      ClusterType: single-node
+      DBName: test
+      MasterUsername: admin
+      MasterUserPassword: Password1
+      NodeType: dc2.large
+      ClusterSubnetGroupName: !Ref ClusterSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref SecurityGroup
+      
