@@ -47,7 +47,7 @@ def initialize_logger(log_level: str) -> None:
     if log.hasHandlers():
         return
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = logging.Formatter("[%(name)s] %(asctime)s - %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     log.addHandler(handler)
 
