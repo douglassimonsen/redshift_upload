@@ -21,16 +21,16 @@ def setup_and_teardown():
 df = pandas.DataFrame(columns=['a', 'b'])
 
 
-def test_no_data():
+def test_no_data(schema):
     upload(
         source=df,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         aws_info=aws_creds
     )
     upload(
         source=df,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"skip_checks": True},
         aws_info=aws_creds

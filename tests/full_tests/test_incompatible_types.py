@@ -24,10 +24,10 @@ df1 = [{"a": 1}, {"a": 2}, {"a": 3}]
 df2 = [{"a": 1}, {"a": 2.5}, {"a": 3}]
 
 
-def test_drop_table():
+def test_drop_table(schema):
     upload(
         source=df1,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"drop_table": True},
         aws_info=aws_creds
@@ -35,7 +35,7 @@ def test_drop_table():
     with pytest.raises(ValueError):
         upload(
             source=df2,  # needed for the comparison later
-            schema_name="public",
+            schema_name=schema,
             table_name=table_name,
             aws_info=aws_creds
         )

@@ -44,10 +44,10 @@ def dt_stringer(df):
         (df_text, None),
     ],
 )
-def test_drop_table(df, formatter):
+def test_drop_table(df, formatter, schema):
     interface = upload(
         source=df.copy(),  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds

@@ -21,10 +21,10 @@ def setup_and_teardown():
 df = pandas.DataFrame(columns=['a', 'b'])
 
 
-def test_no_data():
+def test_no_data(schema):
     return upload(
         source=df,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'load_in_parallel': 10, "truncate_table": True},
         aws_info=aws_creds

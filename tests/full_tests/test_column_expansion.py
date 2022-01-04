@@ -22,17 +22,17 @@ df1 = pandas.DataFrame([{"a": "hi"}, {"a": "hi"}])
 df2 = pandas.DataFrame([{"a": "hi" * 100}, {"a": "hi"}])
 
 
-def test_column_expansion():
+def test_column_expansion(schema):
     upload(
         source=df1,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
     upload(
         source=df2,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         aws_info=aws_creds,
     )

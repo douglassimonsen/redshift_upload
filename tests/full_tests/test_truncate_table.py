@@ -45,17 +45,17 @@ def dt_stringer(df):
         (df_text, None),
     ],
 )
-def test_truncate_table(df, formatter):
+def test_truncate_table(df, formatter, schema):
     upload(
         source=df,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
     interface = upload(
         source=df,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"truncate_table": True, "close_on_end": False},
         aws_info=aws_creds

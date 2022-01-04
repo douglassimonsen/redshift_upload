@@ -25,10 +25,10 @@ def setup_and_teardown():
 
 
 
-def test_drop_table():
+def test_drop_table(schema):
     interface = upload(
         source=df,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name="unit_test_simple_upload_incompatible_types",
         upload_options={"drop_table": True, "close_on_end": False},
         aws_info=aws_creds
@@ -37,7 +37,7 @@ def test_drop_table():
     with pytest.raises(psycopg2.errors.QueryCanceled):
         upload(
             source=df,  # needed for the comparison later
-            schema_name="public",
+            schema_name=schema,
             table_name="unit_test_simple_upload_incompatible_types",
             aws_info=aws_creds
     )

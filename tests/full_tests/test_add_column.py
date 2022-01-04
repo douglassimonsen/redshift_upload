@@ -22,10 +22,10 @@ df1 = pandas.DataFrame([{"a": "hi"}, {"a": "hi"}] * 10)
 df2 = pandas.DataFrame([{"a": "hi"}, {"a": "hi", "b": pandas.Timestamp('2021-01-01'), "c": 3}] * 10,)
 
 
-def test_add_column():
+def test_add_column(schema):
     upload(
         source=df1,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'load_in_parallel': 10, "drop_table": True},
         aws_info=aws_creds
@@ -33,7 +33,7 @@ def test_add_column():
     with pytest.raises(NotImplementedError):
         upload(
             source=df2,
-            schema_name="public",
+            schema_name=schema,
             table_name=table_name,
             aws_info=aws_creds
         )

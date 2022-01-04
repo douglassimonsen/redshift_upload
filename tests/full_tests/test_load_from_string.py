@@ -18,10 +18,10 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
-def test_load_from_string():
+def test_load_from_string(schema):
     upload(
         source=pandas.DataFrame([{"a": "hi"}, {"a": "hi"}]),
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'load_in_parallel': 2},
         aws_info=aws_creds,
@@ -29,7 +29,7 @@ def test_load_from_string():
     )
     upload(
         source="a\nb\nc\n",
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'load_in_parallel': 2},
         aws_info=aws_creds,
@@ -38,7 +38,7 @@ def test_load_from_string():
     with base_utilities.change_directory():
         upload(
             source="load_source.csv",
-            schema_name="public",
+            schema_name=schema,
             table_name=table_name,
             upload_options={'load_in_parallel': 2},
             aws_info=aws_creds,

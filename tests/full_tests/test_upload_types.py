@@ -21,10 +21,10 @@ def setup_and_teardown():
 df = pandas.DataFrame([{"a": "2020-01-01 04:00"}, {"a": "2020-01-01 04:00"}] * 100)
 
 
-def test_upload_types():
+def test_upload_types(schema):
     upload(
         source=df,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'drop_table': True},
         aws_info=aws_creds

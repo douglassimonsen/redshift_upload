@@ -21,10 +21,10 @@ def setup_and_teardown():
 df = pandas.DataFrame([{"a": "hi"}, {"a": "hi"}] * 100)
 
 
-def test_upload_in_parallel():
+def test_upload_in_parallel(schema):
     upload(
         source=df,
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={'load_in_parallel': 10},
         aws_info=aws_creds

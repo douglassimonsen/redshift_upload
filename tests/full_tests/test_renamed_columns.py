@@ -24,17 +24,17 @@ df1 = [{"a" * 50: 1}]
 df2 = [{"a" * 50: 1}]
 
 
-def test_drop_table():
+def test_drop_table(schema):
     upload(
         source=df1,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         upload_options={"drop_table": True},
         aws_info=aws_creds
     )
     upload(
         source=df2,  # needed for the comparison later
-        schema_name="public",
+        schema_name=schema,
         table_name=table_name,
         aws_info=aws_creds
     )
