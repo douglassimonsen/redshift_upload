@@ -1,6 +1,7 @@
 Install this package with `pip install simple_redshift_upload`
 
 ## Test
+Way 1 (Assumes you have a set up environment)
 1. Clone this repository
 2. Using the file `aws_account_creds_template.json`, fill in the data and rename the file `aws_account_creds.json`
 3. Run the file `gen_redshift_environment.py --start`
@@ -8,6 +9,13 @@ Install this package with `pip install simple_redshift_upload`
 5. To remove the Redshift environment after testing, run `gen_redshift_environment.py --end`
 6. To test mypy, run the command `mypy -p redshift_upload`
     1. There should be 10 errors about Optional Dictionaries not being indexable in upload.py. Those are ignorable.
+Way 2 (Blank Slate test environment)
+1. Clone this repository
+2. Run the command `python ./gen_environment/main.py`. This script does the following:
+    1. Runs `aws cloudformation deploy --template-file ./gen_environment/template.yaml --stack-name test`
+    2. Generates access key pairs with access to the S3 bucket
+    3. Creates temporary accounts in Redshift
+    4. Creates a creds.json with the associated credentials.
 
 
 ## High Level Process

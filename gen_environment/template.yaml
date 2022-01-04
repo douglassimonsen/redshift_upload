@@ -68,3 +68,38 @@ Resources:
       ClusterSubnetGroupName: !Ref ClusterSubnetGroup
       VpcSecurityGroupIds:
         - !Ref SecurityGroup
+  S3BucketAccessGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      Policies: [{
+        "PolicyName": "S3BucketAccess",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "VisualEditor0",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+              ],
+              "Resource": [
+                !Sub "arn:aws:s3:::${Store}/*",
+                !Sub "arn:aws:s3:::${Store}"
+              ]
+            }
+          ]
+        }
+      }]
+  User1:
+    Type: AWS::IAM::User
+    Properties:
+      Groups: 
+        - !Ref S3BucketAccessGroup
+  User2:
+    Type: AWS::IAM::User
+    Properties:
+      Groups: 
+        - !Ref S3BucketAccessGroup

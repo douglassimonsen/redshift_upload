@@ -1,12 +1,14 @@
 import boto3
 import time
 import logging
+import json
 import os; os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO paginate results
 
 
 cloudformation = boto3.client('cloudformation')
 redshift = boto3.client('redshift')
+iam = boto3.client('iam')
 
 
 def check_stack_status(stack_name):
@@ -56,26 +58,38 @@ def create_redshift_users(redshift_id):
 
 def get_stack_resources(stack):
     resources = cloudformation.list_stack_resources(StackName=stack)['StackResourceSummaries']
-    redshift_id = bucket = None
+    redshift_id = bucket = username = None
     for resource in resources:
         if resource['ResourceType'] == 'AWS::Redshift::Cluster':
             redshift_id = resource['PhysicalResourceId']
-        if resource['ResourceType'] == 'AWS::S3::Bucket':
+        elif resource['ResourceType'] == 'AWS::S3::Bucket':
             bucket = resource['PhysicalResourceId']
+        elif resource['ResourceType'] == 'AWS::IAM::User':
+            username = resource['PhysicalResourceId']
 
     if redshift_id is None or bucket is None:
         raise ValueError
-    return redshift_id, bucket
+    return redshift_id, bucket, username
+
+
+def get_access_keys(username):
+    creds = iam.create_access_key(
+        UserName=username
+    )['AccessKey']
+    return {
+        'access_key': creds['AccessKeyId'],
+        'secret_key': creds['SecretAccessKey']
+    }
 
 
 def main(stack):
-    # build_stack(stack)
-    # create_s3_users(stack)
-    redshift_id, bucket = get_stack_resources(stack)
+    build_stack(stack)
+    redshift_id, bucket, username = get_stack_resources(stack)
     creds = create_redshift_users(redshift_id)
     creds['bucket'] = bucket
-    print(creds)
-    exit()
+    creds |= get_access_keys(username)
+    with open('../tests/aws_creds.json', 'w') as f:
+        json.dump(creds, f, indent=4)
 
 
 if __name__ == '__main__':
