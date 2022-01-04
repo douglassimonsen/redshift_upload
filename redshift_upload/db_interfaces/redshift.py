@@ -219,6 +219,7 @@ class Interface:
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
+        cursor.execute("SET statement_timeout = 5000")
         cursor.execute(competing_conns_query, {'schema_name': self.schema_name, 'table_name': self.table_name})
         try:
             processes = set(cursor.fetchall()) - {(conn.get_backend_pid(), self.aws_info['redshift_username'])}  # we don't want to delete the connection we're on!
@@ -230,7 +231,12 @@ class Interface:
             except:
                 pass
         conn.commit()
-        cursor.execute(f"lock table {self.full_table_name}")
+        try:
+            cursor.execute(f"lock table {self.full_table_name}")
+        except psycopg2.errors.QueryCanceled:
+            log.error("Process aborted after waiting 5 seconds for a lock on the table. See if anyone else is using the table")
+            raise psycopg2.errors.QueryCanceled
+        cursor.execute("SET statement_timeout = 0")
         return conn, cursor
 
     def check_table_exists(self) -> bool:
