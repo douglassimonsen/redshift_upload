@@ -59,18 +59,19 @@ def create_redshift_users(redshift_id):
 
 def get_stack_resources(stack):
     resources = cloudformation.list_stack_resources(StackName=stack)['StackResourceSummaries']
-    redshift_id = bucket = username = None
+    redshift_id = bucket = None
+    usernames = []
     for resource in resources:
         if resource['ResourceType'] == 'AWS::Redshift::Cluster':
             redshift_id = resource['PhysicalResourceId']
         elif resource['ResourceType'] == 'AWS::S3::Bucket':
             bucket = resource['PhysicalResourceId']
         elif resource['ResourceType'] == 'AWS::IAM::User':
-            username = resource['PhysicalResourceId']
+            usernames.append(resource['PhysicalResourceId'])
 
-    if redshift_id is None or bucket is None:
+    if redshift_id is None or bucket is None or not usernames:
         raise ValueError
-    return redshift_id, bucket, username
+    return redshift_id, bucket, usernames
 
 
 def get_access_keys(username):
@@ -85,10 +86,10 @@ def get_access_keys(username):
 
 def main(stack):
     build_stack(stack)
-    redshift_id, bucket, username = get_stack_resources(stack)
+    redshift_id, bucket, usernames = get_stack_resources(stack)
     creds = create_redshift_users(redshift_id)
     creds['bucket'] = bucket
-    creds |= get_access_keys(username)
+    creds |= get_access_keys(usernames[0])
     with open('../tests/aws_creds.json', 'w') as f:
         json.dump(creds, f, indent=4)
 
