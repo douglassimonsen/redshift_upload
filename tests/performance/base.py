@@ -2,7 +2,7 @@ import timeit
 import sys
 import pathlib
 import functools
-import logging
+import multiprocessing
 import pandas
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -13,22 +13,15 @@ import json  # noqa
 with base_utilities.change_directory():
     with open("../aws_creds.json") as f:
         aws_creds = json.load(f)
-query = '''
-drop table if exists public.perf_test;
-create table public.perf_test (a varchar(2000));
-truncate table public.perf_test;
-'''
+POWERS_CHECKED = 4
 conn = redshift.Interface("public", "perf_test", aws_creds).get_db_conn()
-cursor = conn.cursor()
-cursor.execute(query)
-conn.commit()
 
 
-def library(data):
+def library(data, table_name):
     upload(
         source=data,
         schema_name="public",
-        table_name="perf_test",
+        table_name=table_name,
         upload_options={
             "skip_checks": True,
             'default_logging': False,
@@ -37,14 +30,36 @@ def library(data):
     )
 
 
-def insert(data):
-    insert_query = '''
-    insert into public.perf_test (a)
+def insert(data, table_name):
+    insert_query = f'''
+    insert into public.{table_name} (a)
     values (%(a)s)
     '''
     cursor = conn.cursor()
     cursor.executemany(insert_query, data)
     conn.commit()
+
+
+def setup():
+    query = '''
+    drop table if exists public.perf_test_{method}_{power};
+    create table public.perf_test_{method}_{power} (a varchar(2000));
+    truncate table public.perf_test_{method}_{power};
+    '''
+    cursor = conn.cursor()
+    for i in range(POWERS_CHECKED):
+        cursor.execute(query.format(method='library', power=str(i)))
+        cursor.execute(query.format(method='insert', power=str(i)))
+        conn.commit()
+
+
+def teardown():
+    query = 'drop table if exists public.perf_test_{method}_{power};'
+    cursor = conn.cursor()
+    for i in range(POWERS_CHECKED):
+        cursor.execute(query.format(method='library', power=str(i)))
+        cursor.execute(query.format(method='insert', power=str(i)))
+        conn.commit()
 
 
 def gen_plot(data):
@@ -66,24 +81,24 @@ def gen_plot(data):
         fig.savefig("../../documentation/comparison.png", dpi=100)
 
 
+def test_method(method, row_count, version):
+    data = [{'a': 'hi' * 10} for _ in range(row_count)]
+    table_name = f'perf_test_{method.__name__}_{version}'
+    return {
+        'rows': row_count,
+        'time': timeit.timeit(functools.partial(method, data, table_name), number=1),
+        'method': method.__name__.capitalize()
+    }
+
+
 def main():
-    log = logging.getLogger("redshift_utilities")
-    tries = 1
     results = []
-    for power_of_two in range(4):
-        rows = 2 ** (power_of_two * 2)
-        print(f"Testing against {rows} rows")
-        data = [{'a': 'hi' * 10} for _ in range(rows)]
-        results.append({
-            'rows': rows,
-            'time': timeit.timeit(functools.partial(library, data), number=tries),
-            'method': 'Library',
-        })
-        results.append({
-            'rows': rows,
-            'time': timeit.timeit(functools.partial(insert, data), number=tries),
-            'method': 'Insert',
-        })
+    setup()
+    row_counts = [2 ** (x * 2) for x in range(POWERS_CHECKED)]
+
+    test_method(library, row_counts[0], 0)
+    teardown()
+
     results = pandas.DataFrame(results)
     gen_plot(results)
 
