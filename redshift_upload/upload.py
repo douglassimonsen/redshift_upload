@@ -42,7 +42,7 @@ def upload(
     log.info("=" * 20)
     log.info(f"Beginning to upload table: {schema_name}.{table_name}")
 
-    interface = interface or redshift.Interface(schema_name, table_name, aws_info)
+    interface = interface or redshift.Interface(schema_name, table_name, aws_info, default_timeout=upload_options['default_timeout'], lock_timeout=upload_options['lock_timeout'])
     if not interface.table_exists and upload_options['skip_checks']:
         raise ValueError("The table does not yet exist, you need the checks to determine what column types to use")
     source = local_utilities.load_source(source, upload_options)

@@ -222,4 +222,8 @@ def check_coherence(schema_name: str, table_name: str, upload_options: Optional[
 
     if upload_options['skip_checks'] and upload_options['drop_table']:
         raise ValueError("If you're dropping the table, you need the checks to determine what column types to use")
+    
+    for c in ['default_timeout', 'lock_timeout']:
+        if not isinstance(upload_options[c], int):
+            raise ValueError(f"{c} must be an int. Currently it is set to \"{upload_options[c]}\" (type: {type(upload_options[c]).__name__})")
     return upload_options, aws_info

@@ -23,7 +23,7 @@ with base_utilities.change_directory():
 
 
 class Interface:
-    def __init__(self, schema_name: str, table_name: str, aws_info: Dict) -> None:
+    def __init__(self, schema_name: str, table_name: str, aws_info: Dict, default_timeout: int=0, lock_timeout: int=0) -> None:
         self.name = 'redshift'
         self.aws_info = aws_info
         self.schema_name = schema_name
@@ -32,6 +32,9 @@ class Interface:
 
         self._db_conn = None
         self._s3_conn = None
+
+        self.default_timeout = default_timeout
+        self.lock_timeout = lock_timeout
 
         cursor = self.get_db_conn().cursor()
         self.full_table_name = psycopg2.sql.SQL('.').join([
@@ -54,6 +57,8 @@ class Interface:
                 password=self.aws_info['redshift_password'],
                 connect_timeout=180,
             )
+            cursor = self._db_conn.cursor()  # setting up defaults for the session
+            cursor.execute(f'SET statement_timeout = {self.default_timeout}')
         return self._db_conn
 
     def get_s3_conn(self) -> constants.Connection:
@@ -219,7 +224,7 @@ class Interface:
             return conn, cursor
 
         log.info("Acquiring an exclusive lock on the Redshift table")
-        cursor.execute("SET statement_timeout = 5000")
+        cursor.execute(f"SET statement_timeout = {self.lock_timeout}")
         cursor.execute(competing_conns_query, {'schema_name': self.schema_name, 'table_name': self.table_name})
         try:
             processes = set(cursor.fetchall()) - {(conn.get_backend_pid(), self.aws_info['redshift_username'])}  # we don't want to delete the connection we're on!
@@ -234,9 +239,9 @@ class Interface:
         try:
             cursor.execute(f"lock table {self.full_table_name}")
         except psycopg2.errors.QueryCanceled:
-            log.error("Process aborted after waiting 5 seconds for a lock on the table. See if anyone else is using the table")
+            log.error(f"Upload aborted after waiting {round(self.lock_timeout / 1000, 1)} seconds for a lock on the table. See if anyone else is using the table")
             raise psycopg2.errors.QueryCanceled
-        cursor.execute("SET statement_timeout = 0")
+        cursor.execute(f"SET statement_timeout = {self.default_timeout}")
         return conn, cursor
 
     def check_table_exists(self) -> bool:
