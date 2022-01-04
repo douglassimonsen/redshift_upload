@@ -7,8 +7,7 @@ import pandas
 import matplotlib.pyplot as plt
 import seaborn as sns
 import psycopg2.extras
-import time
-import random
+import psycopg2
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import upload, base_utilities  # noqa
 from redshift_upload.db_interfaces import redshift
@@ -16,8 +15,18 @@ import json  # noqa
 with base_utilities.change_directory():
     with open("../aws_creds.json") as f:
         aws_creds = json.load(f)
-POWERS_CHECKED = 5
-conn = redshift.Interface("public", "perf_test", aws_creds).get_db_conn()
+POWERS_CHECKED = 8
+
+
+
+def get_conn():
+    return psycopg2.connect(
+            host=aws_creds['host'],
+            dbname=aws_creds['dbname'],
+            port=aws_creds['port'],
+            user=aws_creds['redshift_username'],
+            password=aws_creds['redshift_password'],
+        )
 
 
 def library(data, table_name):
@@ -38,9 +47,10 @@ def naive_insert(data, table_name):
     insert into public.{table_name} (a)
     values (%(a)s)
     '''
-    cursor = conn.cursor()
-    cursor.executemany(insert_query, data)
-    conn.commit()
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        cursor.executemany(insert_query, data)
+        conn.commit()
 
 
 def batch_insert(data, table_name):
@@ -48,8 +58,9 @@ def batch_insert(data, table_name):
     insert into public.{table_name} (a)
     values (%(a)s)
     '''
-    cursor = conn.cursor()
-    psycopg2.extras.execute_batch(cursor, insert_query, data)
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        psycopg2.extras.execute_batch(cursor, insert_query, data)
 
 
 def setup():
@@ -58,19 +69,21 @@ def setup():
     create table public.perf_test_{method}_{power} (a varchar(2000));
     truncate table public.perf_test_{method}_{power};
     '''
-    cursor = conn.cursor()
-    for i in range(POWERS_CHECKED):
-        for method in ['library', 'naive_insert', 'batch_insert']:
-            cursor.execute(query.format(method=method, power=str(i)))
-    conn.commit()
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        for i in range(POWERS_CHECKED):
+            for method in ['library', 'naive_insert', 'batch_insert']:
+                cursor.execute(query.format(method=method, power=str(i)))
+        conn.commit()
 
 
 def teardown():
     query = 'drop table if exists public.perf_test_{method}_{power};'
-    cursor = conn.cursor()
-    for i in range(POWERS_CHECKED):
-        cursor.execute(query.format(method='library', power=str(i)))
-        cursor.execute(query.format(method='insert', power=str(i)))
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        for i in range(POWERS_CHECKED):
+            cursor.execute(query.format(method='library', power=str(i)))
+            cursor.execute(query.format(method='insert', power=str(i)))
         conn.commit()
 
 
@@ -127,23 +140,22 @@ def main():
     ]
     naive_insert_data = [
         (naive_insert, rows, i)
-        for i, rows in enumerate(row_counts)
+        for i, rows in enumerate(row_counts[:4])
     ]
     batch_insert_data = [
-        (naive_insert, rows, i)
-        for i, rows in enumerate(row_counts)
+        (batch_insert, rows, i)
+        for i, rows in enumerate(row_counts[:4])
     ]
-    data = library_data + naive_insert_data + batch_insert_data
+    data = naive_insert_data + batch_insert_data + library_data
     results = []
     with multiprocessing.Pool(processes=8) as pool:
         results.extend(pool.map(test_method, data))
     teardown()
 
     results = pandas.DataFrame(results).sort_values("rows")
-    results['rows'] = results['rows'].astype(str)
+    results['rows'] = results['rows'].apply(lambda x: f"{x:,}")
     gen_plot(results)
 
 
 if __name__ == '__main__':
     main()
-    conn.close()

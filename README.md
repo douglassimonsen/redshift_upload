@@ -27,6 +27,7 @@ Note: Due to the relatively slow nature of these tests, it's suggested you insta
 1. To run tests, just run `pytest` or `pytest -n --dist loadfile` (2nd is only available if you have pytest-xdist installed)
 2. To test mypy, run the command `mypy -p redshift_upload`
     1. There should be 10 errors about Optional Dictionaries not being indexable in upload.py. Those are ignorable.
+3. To run the performance test, just run `python ./tests/performance/base.py`
 
 ## High Level Process
 This package follows the following steps to upload your data to Redshift.
@@ -67,3 +68,48 @@ upload.upload(
     aws_info=aws_creds,
 )
 ```
+
+# Performance Comparison
+Given that there are other, simpler ways to upload data to Redshift, we should compare the various methods. Using a simple table with a single varchar column, we upload using the following methods:
+
+__Naive Insert__ 
+```python
+def naive_insert(data, table_name):
+    insert_query = f'''
+    insert into public.{table_name} (a)
+    values (%(a)s)
+    '''
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        cursor.executemany(insert_query, data)
+        conn.commit()
+```
+
+__Batch Insert__
+```python
+def batch_insert(data, table_name):
+    insert_query = f'''
+    insert into public.{table_name} (a)
+    values (%(a)s)
+    '''
+    with get_conn() as conn:
+        cursor = conn.cursor()
+        psycopg2.extras.execute_batch(cursor, insert_query, data)
+```
+
+__Library__
+```python
+def library(data, table_name):
+    upload(
+        source=data,
+        schema_name="public",
+        table_name=table_name,
+        upload_options={
+            "skip_checks": True,
+            'default_logging': False,
+        },
+        aws_info=aws_creds
+    )
+```
+
+![Performance Comparison](https://github.com/douglassimonsen/redshift_upload/blob/main/documentation/comparison.png)
