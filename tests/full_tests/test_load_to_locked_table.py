@@ -44,4 +44,4 @@ def test_drop_table(schema):
 
 
 if __name__ == '__main__':
-    test_drop_table()
+    test_drop_table('public')

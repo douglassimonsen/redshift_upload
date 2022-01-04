@@ -82,8 +82,8 @@ def teardown():
     with get_conn() as conn:
         cursor = conn.cursor()
         for i in range(POWERS_CHECKED):
-            cursor.execute(query.format(method='library', power=str(i)))
-            cursor.execute(query.format(method='insert', power=str(i)))
+            for method in ['library', 'naive_insert', 'batch_insert']:
+                cursor.execute(query.format(method=method, power=str(i)))
         conn.commit()
 
 

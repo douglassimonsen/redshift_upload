@@ -31,7 +31,7 @@ def test_drop_table(schema):
         aws_info=aws_creds
     )
     with interface.get_db_conn() as conn:
-        conn.cursor().execute(f"create or replace view {table_name}2 as (select * from dummy)")
+        conn.cursor().execute(f"create or replace view {table_name}2 as (select * from {table_name})")
         conn.commit()
     with pytest.raises(ValueError):
         interface = upload(

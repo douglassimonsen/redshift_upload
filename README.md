@@ -24,7 +24,7 @@ Way 2 (Blank Slate test environment)
 ### Run tests
 Note: Due to the relatively slow nature of these tests, it's suggested you install `pip install pytest-xdist` in order to run these tests in parallel.
 
-1. To run tests, just run `pytest` or `pytest -n --dist loadfile` (2nd is only available if you have pytest-xdist installed)
+1. To run tests, just run `pytest` or `pytest -n auto --dist loadfile` (2nd is only available if you have pytest-xdist installed)
 2. To test mypy, run the command `mypy -p redshift_upload`
     1. There should be 10 errors about Optional Dictionaries not being indexable in upload.py. Those are ignorable.
 3. To run the performance test, just run `python ./tests/performance/base.py`
