@@ -30,8 +30,8 @@ def drop_tables(tables, aws_creds=None):
     ) as conn:
         cursor = conn.cursor()
         for table in tables:
-            log.info("Beginning to drop table {table}")
+            log.info(f"Beginning to drop table: {table}")
             cursor.execute(f"drop table if exists public.{table} cascade")
-            log.info("Dropped table {table}")
+            log.info(f"Dropped table: {table}")
         conn.commit()
     log.info("Table dropping completed")
