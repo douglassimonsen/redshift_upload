@@ -2,6 +2,7 @@ import boto3
 import time
 import logging
 import json
+import click
 import os; os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO paginate results
 
@@ -9,6 +10,7 @@ import os; os.chdir(os.path.dirname(os.path.abspath(__file__)))
 cloudformation = boto3.client('cloudformation')
 redshift = boto3.client('redshift')
 iam = boto3.client('iam')
+s3 = boto3.resource('s3')
 
 
 def check_stack_status(stack_name):
@@ -84,7 +86,7 @@ def get_access_keys(username):
     }
 
 
-def main(stack):
+def create_stack(stack):
     build_stack(stack)
     redshift_id, bucket, usernames = get_stack_resources(stack)
     creds = create_redshift_users(redshift_id)
@@ -94,11 +96,35 @@ def main(stack):
         json.dump(creds, f, indent=4)
 
 
-if __name__ == '__main__':
+def delete_stack(stack):
+    # aws s3 rm s3://
+    # aws cloudformation delete-stack --stack-name test
+    _, bucket, _ = get_stack_resources(stack)
+    for obj in s3.Bucket(bucket).objects.filter():
+        s3.Object(bucket, obj.key).delete()
+    cloudformation.delete_stack(
+        StackName=stack
+    )
+
+@click.command()
+@click.option('--stack-name', default='test-library', help='The name of the stack to build/destroy')
+@click.option('--create', default=True, type=bool)
+@click.option('--destroy', default=False, type=bool)
+@click.option('--logging-level', default='ERROR', type=str)
+def main(stack_name, create, destroy, logging_level):
+    if create and destroy:
+        raise ValueError(f"Only one of --create and --destroy can be done at once. You set create = {create} and destroy = {destroy}")
+
     logging.basicConfig(
         format='[%(name)s, %(levelname)s] %(asctime)s: %(message)s',
         datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.DEBUG
+        level=logging_level
     )
-    # main('test')
-    main('test-library')
+    if create:
+        create_stack(stack_name)
+    if destroy:
+        delete_stack(stack_name)
+
+
+if __name__ == '__main__':
+    main()

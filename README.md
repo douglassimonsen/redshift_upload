@@ -19,7 +19,7 @@ Way 2 (Blank Slate test environment)
     3. Creates temporary accounts in Redshift
     4. Creates a creds.json with the associated credentials.
 4. Run the tests
-5. To remove the Redshift environment after testing, run `aws cloudformation delete-stack --stack-name test
+5. To remove the Redshift environment after testing, run `python ./gen_environment/main.py --destroy`
 
 ### Run tests
 Note: Due to the relatively slow nature of these tests, it's suggested you install `pip install pytest-xdist` in order to run these tests in parallel.
