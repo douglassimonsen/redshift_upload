@@ -22,14 +22,15 @@ def check_stack_status(stack_name):
 
 def build_stack(stack):
     if check_stack_status(stack) is not None:
-        logging.ERROR("Stack already exists")
+        logging.error("Stack already exists")
         raise ValueError("Stack already exists")
 
     start = time.time()
     cloudformation.create_stack(
         StackName=stack,
         TemplateBody=open("template.yaml").read(),
-        OnFailure='DELETE'
+        OnFailure='DELETE',
+        Capabilities=['CAPABILITY_IAM'],
     )
 
     while check_stack_status(stack) == 'CREATE_IN_PROGRESS':
@@ -40,7 +41,7 @@ def build_stack(stack):
     if final_status != 'CREATE_COMPLETE':
         logging.ERROR(f"The formation completed with status: {final_status}.")
         raise ValueError(f"The formation completed with status: {final_status}.")
-    logging.INFO(f"Stack creation took {round(time.time() - start, 2)} seconds to complete")
+    logging.info(f"Stack creation took {round(time.time() - start, 2)} seconds to complete")
 
 
 def create_redshift_users(redshift_id):
@@ -93,10 +94,10 @@ def main(stack):
 
 
 if __name__ == '__main__':
-    # logging.basicConfig(
-    #     format='[%(name)s, %(levelname)s] %(asctime)s: %(message)s',
-    #     datefmt="%Y-%m-%d %H:%M:%S",
-    #     level=logging.DEBUG
-    # )
+    logging.basicConfig(
+        format='[%(name)s, %(levelname)s] %(asctime)s: %(message)s',
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.DEBUG
+    )
     # main('test')
-    main('test-library2')
+    main('test-library')
