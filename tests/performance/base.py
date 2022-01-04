@@ -5,6 +5,7 @@ import functools
 import logging
 import pandas
 import matplotlib.pyplot as plt
+import seaborn as sns
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import upload, base_utilities  # noqa
 from redshift_upload.db_interfaces import redshift
@@ -46,23 +47,45 @@ def insert(data):
     conn.commit()
 
 
+def gen_plot(data):
+    data.columns = ['Rows Loaded', 'Time (Seconds)', 'Method']
+    sns.set_context("paper")
+    sns.set_style("darkgrid")
+    sns.lineplot(
+        data=data,
+        x='Rows Loaded',
+        y='Time (Seconds)',
+        hue='Method',
+        marker='o'
+    )
+    plt.title("Performance Comparison")
+    plt.yscale("log")
+    fig = plt.gcf()
+    fig.set_size_inches(7, 4)
+    with base_utilities.change_directory():
+        fig.savefig("../../documentation/comparison.png", dpi=100)
+
+
 def main():
     log = logging.getLogger("redshift_utilities")
     tries = 1
     results = []
-    for power_of_two in range(0, 15, 2):
-        rows = 2 ** power_of_two
+    for power_of_two in range(4):
+        rows = 2 ** (power_of_two * 2)
         print(f"Testing against {rows} rows")
         data = [{'a': 'hi' * 10} for _ in range(rows)]
         results.append({
             'rows': rows,
-            'library': timeit.timeit(functools.partial(library, data), number=tries),
-            'insert': timeit.timeit(functools.partial(insert, data), number=tries),
+            'time': timeit.timeit(functools.partial(library, data), number=tries),
+            'method': 'Library',
         })
-    pandas.DataFrame(results).plot.line(
-        x='rows'
-    )
-    plt.show()
+        results.append({
+            'rows': rows,
+            'time': timeit.timeit(functools.partial(insert, data), number=tries),
+            'method': 'Insert',
+        })
+    results = pandas.DataFrame(results)
+    gen_plot(results)
 
 
 if __name__ == '__main__':
