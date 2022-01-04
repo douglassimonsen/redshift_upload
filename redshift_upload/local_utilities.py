@@ -76,12 +76,15 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     return [chunk_to_string(rows[offset:(offset + chunk_size)]) for offset in range(0, source.num_rows, chunk_size)], load_in_parallel
 
 
-def load_source(source: constants.SourceOptions, upload_options) -> Source:
+def load_source(source: constants.SourceOptions, upload_options=None) -> Source:
     """
     Loads/transforms the source data to simplify data handling for the rest of the program.
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
     source_args and source_kwargs both get passed to the csv.reader, pandas.read_excel, and pandas.read_csv functions
     """
+    if upload_options is None:
+        upload_options = constants.UPLOAD_DEFAULTS
+
     if isinstance(source, (io.StringIO, io.TextIOWrapper)):  # the second is the type of open(x, 'r')
             return Source(source)
 
