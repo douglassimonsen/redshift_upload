@@ -1,6 +1,7 @@
 Install this package with `pip install simple_redshift_upload`
 
 ## Test
+Note: Due to the relatively slow nature of these tests, it's suggested you install `pip install pytest-xdist` in order to run these tests in parallel.
 Way 1 (Assumes you have a set up environment)
 1. Clone this repository
 2. Using the file `aws_account_creds_template.json`, fill in the data and rename the file `aws_account_creds.json`
