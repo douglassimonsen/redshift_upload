@@ -296,6 +296,7 @@ def check_coherence(
     """
     upload_options = {**constants.UPLOAD_DEFAULTS, **(upload_options or {})}
     aws_info = aws_info or {}
+
     if upload_options["distkey"] or upload_options["sortkey"]:
         upload_options["diststyle"] = "key"
 

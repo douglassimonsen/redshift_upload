@@ -21,6 +21,7 @@ SCHEMA = {
             "maximum": 65535,
         },  # port range found in the web creation wizard page
         "dbname": {"type": "string"},
+        "default_schema": {"type": "string"},
         "redshift_username": {"type": "string"},
         "redshift_password": {"type": "string"},
         "bucket": {
@@ -48,7 +49,9 @@ SCHEMA = {
     ],  # if another property is added, be sure to remember to add here too
     "additionalProperties": False,
 }
-assert list(SCHEMA["properties"].keys()) == SCHEMA["required"]  # forces them to match
+assert set(SCHEMA["properties"].keys()) == set(SCHEMA["required"]) | {
+    "default_schema"
+}  # forces them to match, except "default_schema"
 
 
 def _get_serialized_store(file_path):

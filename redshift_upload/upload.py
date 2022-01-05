@@ -45,6 +45,8 @@ def upload(
             "Since nothing was passed to parameter 'aws_info', using the default credentials"
         )
         aws_info = credential_store.credentials()
+    if schema_name is None:
+        schema_name = aws_info.get("default_schema")
 
     upload_options, aws_info = local_utilities.check_coherence(
         schema_name, table_name, upload_options, aws_info

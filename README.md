@@ -129,6 +129,7 @@ sample_creds = {
     "host": "cluster.redshift.amazonaws.com",
     "port": 5439,
     "dbname": "test",
+    "default_schema": "public",
     "redshift_username": "user",
     "redshift_password": "pass",
     "bucket": "bucket-name",
@@ -145,6 +146,21 @@ __Note__: When you enter your first set of credentials, the store designates the
 from redshift_upload import credential_store
 creds = credential_store.credentials['<name1>']
 creds = credential_store.credentials()  # returns the default credentials
+```
+
+## Using Store in Upload
+```python
+import redshift_upload
+redshift_upload.upload(
+    source='tests/full_tests/load_source.csv',
+    table_name="test",
+)  # runs as the default user
+
+redshift_upload.upload(
+    source='tests/full_tests/load_source.csv',
+    table_name="test",
+    aws_info="<user1>",
+)  # runs as the specified user
 ```
 
 ## Updating Default Credentials
