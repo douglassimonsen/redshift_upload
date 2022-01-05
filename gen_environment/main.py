@@ -108,19 +108,15 @@ def delete_stack(stack):
 
 @click.command()
 @click.option('--stack-name', default='test-library', help='The name of the stack to build/destroy')
-@click.option('--create', default=True, type=bool)
-@click.option('--destroy', default=False, type=bool)
+@click.option('--destroy', is_flag=True, type=bool, help="If this flag is set, the stack will be removed. Otherwise the stack will be created")
 @click.option('--logging-level', default='ERROR', type=str)
-def main(stack_name, create, destroy, logging_level):
-    if create and destroy:
-        raise ValueError(f"Only one of --create and --destroy can be done at once. You set create = {create} and destroy = {destroy}")
-
+def main(stack_name, destroy, logging_level):
     logging.basicConfig(
         format='[%(name)s, %(levelname)s] %(asctime)s: %(message)s',
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging_level
     )
-    if create:
+    if not destroy:
         create_stack(stack_name)
     if destroy:
         delete_stack(stack_name)
