@@ -113,3 +113,7 @@ def library(data, table_name):
 ```
 
 ![Performance Comparison](https://github.com/douglassimonsen/redshift_upload/blob/main/documentation/comparison.png)
+
+# Contributing
+
+This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit hook to ensure consistent styling. To enable this, run `pre-commit install` in the directory.
