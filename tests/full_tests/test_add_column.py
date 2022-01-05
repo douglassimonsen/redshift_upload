@@ -2,14 +2,10 @@ import sys
 import pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
-from redshift_upload import upload, base_utilities, testing_utilities  # noqa
+from redshift_upload import upload, testing_utilities  # noqa
 import pandas  # noqa
-import json  # noqa
 import pytest
 
-with base_utilities.change_directory():
-    with open("../aws_creds.json") as f:
-        aws_creds = json.load(f)
 table_name = (
     "unit_" + __file__.replace("\\", "/").split("/")[-1].split(".")[0]
 )  # we would just use __name__, but we don't want to run into __main__ if called directly
@@ -34,13 +30,12 @@ def test_add_column(schema):
         schema_name=schema,
         table_name=table_name,
         upload_options={"load_in_parallel": 10, "drop_table": True},
-        aws_info=aws_creds,
     )
     with pytest.raises(NotImplementedError):
         upload(
-            source=df2, schema_name=schema, table_name=table_name, aws_info=aws_creds
+            source=df2, schema_name=schema, table_name=table_name,
         )
 
 
 if __name__ == "__main__":
-    test_add_column()
+    test_add_column('public')

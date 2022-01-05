@@ -1,23 +1,19 @@
 import psycopg2
-import json
 import logging
 
 try:
-    from . import base_utilities
+    from . import credential_store
 except:
-    import base_utilities
+    import credential_store
 log = logging.getLogger("redshift_utilities-test")
 
-
-with base_utilities.change_directory():
-    with open("../tests/aws_creds.json") as f:
-        default_aws_creds = json.load(f)
+credential_store.set_store('test-library')
 
 
 def drop_tables(tables, aws_creds=None):
 
     if aws_creds is None:
-        aws_creds = default_aws_creds
+        aws_creds = credential_store.credentials()
     if isinstance(tables, str):
         tables = [tables]
 

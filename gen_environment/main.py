@@ -4,7 +4,8 @@ import logging
 import json
 import click
 import os
-
+import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from redshift_upload import credential_store
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO paginate results
 
@@ -111,13 +112,13 @@ def get_access_keys(username):
 
 
 def create_stack(stack):
-    build_stack(stack)
+    # build_stack(stack)
     redshift_id, bucket, usernames = get_stack_resources(stack)
     creds = create_redshift_users(redshift_id)
     creds["bucket"] = bucket
     creds |= get_access_keys(usernames[0])
-    with open("../tests/aws_creds.json", "w") as f:
-        json.dump(creds, f, indent=4)
+    credential_store.set_store('test-library')
+    credential_store.credentials['test-library'] = creds
 
 
 def delete_stack(stack):

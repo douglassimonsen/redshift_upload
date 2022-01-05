@@ -23,6 +23,8 @@ class Store:
         file_path: string
         The filepath to load and save the store. Can be relative to credential_store.py file directory
         """
+        if not file_path.endswith(".json"):
+            file_path += '.json'
         self.file_path = file_path
         store = get_serialized_store(file_path)
         self.profiles = store['profiles']
@@ -55,6 +57,12 @@ class Store:
 
     def __bool__(self):
         return bool(self.profiles)
+
+    def __str__(self):
+        return f'''
+        default: {self.default}
+        profiles: {list(self.profiles.keys())}
+        '''
 
     def _save(self):
         with base_utilities.change_directory():

@@ -1,5 +1,6 @@
 try:
     from db_interfaces import redshift  # type: ignore
+    from credential_store import credential_store
     import local_utilities  # type: ignore
     import redshift_utilities  # type: ignore
     import constants  # type: ignore
@@ -8,6 +9,7 @@ except ModuleNotFoundError:
     from . import local_utilities
     from . import redshift_utilities
     from . import constants
+    from .credential_store import credential_store
 from typing import Dict, List
 import logging
 import time
@@ -23,7 +25,7 @@ def upload(
     schema_name: str = None,
     table_name: str = None,
     upload_options: Dict = None,
-    aws_info: Dict = None,
+    aws_info: Dict | str | None = None,
     log_level: str = "INFO",
     interface: redshift.Interface = None,
 ) -> redshift.Interface:
@@ -34,6 +36,14 @@ def upload(
     source_args = source_args or []
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
+
+    if isinstance(aws_info, str):
+        log.info(f"Using the stored credentials for user: {aws_info}")
+        aws_info = credential_store.credentials[aws_info] 
+    elif aws_info is None:
+        log.info("Since nothing was passed to parameter 'aws_info', using the default credentials")
+        aws_info = credential_store.credentials()
+
     upload_options, aws_info = local_utilities.check_coherence(
         schema_name, table_name, upload_options, aws_info
     )

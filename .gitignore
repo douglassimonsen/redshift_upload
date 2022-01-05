@@ -7,4 +7,4 @@ aws_account_creds.json
 tests/aws_creds*.json
 *.png
 !documentation/*.png
-redshift_upload/credential_store/store.json
+redshift_upload/credential_store/*.json
