@@ -1,14 +1,15 @@
 import sys
 import pathlib
+
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import local_utilities  # noqa
 from redshift_upload.db_interfaces import dummy  # noqa
 import pytest  # noqa
 
 int1_in = [{"a": 1}, {"a": 2}, {"a": 3}]
-int1_out = [{"a": '1'}, {"a": '2'}, {"a": '3'}]
+int1_out = [{"a": "1"}, {"a": "2"}, {"a": "3"}]
 int2_in = [{"a": 1.0}, {"a": "2"}, {"a": "3.0"}]
-int2_out = [{"a": '1.0'}, {"a": "2"}, {"a": "3.0"}]
+int2_out = [{"a": "1.0"}, {"a": "2"}, {"a": "3.0"}]
 
 bool1_in = [{"a": "true"}, {"a": "true"}, {"a": "true"}]
 bool1_out = [{"a": "True"}, {"a": "True"}, {"a": "True"}]
@@ -41,8 +42,9 @@ def test_forcible_conversion(df_in, df_out, typ):
     df_in = local_utilities.load_source(df_in)
     df_in.predefined_columns = {}
     local_utilities.fix_column_types(df_in, dummy.Interface(), False)
-    assert df_in.column_types['a']['type'] == typ
+    assert df_in.column_types["a"]["type"] == typ
     # assert str(list(df_in.dictrows())) == str(df_out)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_forcible_conversion(int1_in, int1_out, "SMALLINT")

@@ -1,6 +1,7 @@
 import psycopg2
 import json
 import logging
+
 try:
     from . import base_utilities
 except:
@@ -21,11 +22,11 @@ def drop_tables(tables, aws_creds=None):
         tables = [tables]
 
     with psycopg2.connect(
-        host=aws_creds['host'],
-        dbname=aws_creds['dbname'],
-        port=aws_creds['port'],
-        user=aws_creds['redshift_username'],
-        password=aws_creds['redshift_password'],
+        host=aws_creds["host"],
+        dbname=aws_creds["dbname"],
+        port=aws_creds["port"],
+        user=aws_creds["redshift_username"],
+        password=aws_creds["redshift_password"],
         connect_timeout=60,
     ) as conn:
         cursor = conn.cursor()

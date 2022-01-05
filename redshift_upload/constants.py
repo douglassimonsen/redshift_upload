@@ -37,7 +37,9 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"
 MAX_COLUMN_LENGTH = 63
 MAX_THREAD_COUNT = 10
-MAX_VARCHAR_LENGTH = 65535  # max limit in Redshift, as of 2020/03/27, but probably forever
+MAX_VARCHAR_LENGTH = (
+    65535  # max limit in Redshift, as of 2020/03/27, but probably forever
+)
 varchar_len_re = re.compile(r"\((\d+)\)")
 SourceOptions = Union[str, io.StringIO, List[Dict], pandas.DataFrame]
 Connection = Union[Client, connection]

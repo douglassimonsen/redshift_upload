@@ -9,7 +9,7 @@ class change_directory:
     it takes the directory of the file from which this function was called.
     """
 
-    def __init__(self, directory: str=None) -> None:
+    def __init__(self, directory: str = None) -> None:
         self.old_dir = os.getcwd()
         if directory is None:
             self.new_dir = os.path.dirname(os.path.abspath(inspect.getmodule(inspect.stack()[1][0]).__file__))  # type: ignore
