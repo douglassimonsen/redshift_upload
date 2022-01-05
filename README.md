@@ -65,7 +65,6 @@ upload.upload(
     schema_name="public",
     table_name="unit_test_column_expansion",
     upload_options={"drop_table": True},
-    aws_info=aws_creds,
 )
 ```
 
@@ -113,6 +112,71 @@ def library(data, table_name):
 ```
 
 ![Performance Comparison](https://github.com/douglassimonsen/redshift_upload/blob/main/documentation/comparison.png)
+
+# Credential Store
+
+One of the common issues when connecting to databases is handling credentials. Although we'd ideally always store secrets in [AWS KMS](https://aws.amazon.com/kms/), often what happens is that credentials end up hardcoded in programs. Not only is this insecure, but it makes rotating credentials a monumental task.
+
+The credential store is a middle ground between these two. By utilizing the credential store, the credentials are stored in a single json within the library itself. The credentials are stored in plain text, but it's a single location that won't be included in any git repositories and should be in a part of the filesystem that people rarely visit, making it _kind of_ secure.
+
+## Setting up a Credential Store
+__Note 1__: In case you need to access multiple DBs, the store can handle multiple sets of credentials.
+__Note 2__: The store does basic pattern matching to ensure the data you entered matches the format the library needs.
+```python
+from redshift_upload import credential_store
+
+sample_creds = {
+    "host": "cluster.redshift.amazonaws.com",
+    "port": 5439,
+    "dbname": "test",
+    "redshift_username": "user",
+    "redshift_password": "pass",
+    "bucket": "bucket-name",
+    "access_key": "AAAAAAAAAA0000000000",
+    "secret_key": "AAAAAAAAAAAbbbbbbbbb999999999999999999/=",
+}
+credential_store.credentials['<name1>'] = sample_creds
+credential_store.credentials['<name2>'] = sample_creds
+```
+
+## Accessing Credentials
+__Note__: When you enter your first set of credentials, the store designates them as the default credentials. This can 
+```python
+from redshift_upload import credential_store
+creds = credential_store.credentials['<name1>']
+creds = credential_store.credentials()  # returns the default credentials
+```
+
+## Updating Default Credentials
+__Note__: If you try to set the default to a user that doesn't exist, the store will raise a `ValueError`
+```python
+from redshift_upload import credential_store
+credential_store.credentials.default = '<name2>'
+```
+
+## Deleting Credentials
+```python
+from redshift_upload import credential_store
+del credential_store.credentials['<name2>']
+```
+
+## Removing Credential Store
+```python
+from redshift_upload import credential_store
+credential_store.credentials.clear()  # replaces the store with an empty store and saves it to store.json
+credential_store.credentials.delete()  # deletes store.json. This would mainly be used when you have a temporary credential store. The tests for this library use this function for cleanup, but I can't imagine why this would be used by end users. 
+```
+
+## Changing Active Credential Store
+__Note 1__: The default store is named store.json and is set by default
+__Note 2__: If you don't end the store with '.json', it will be automatically added
+```python
+from redshift_upload import credential_store
+store_1 = credential_store.set_store('test')
+store_2 = credential_store.set_store('test.json')
+assert store_1.file_path == store_2.file_path
+```
+
 
 # Contributing
 

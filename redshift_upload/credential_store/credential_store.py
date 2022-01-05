@@ -51,7 +51,7 @@ SCHEMA = {
 assert list(SCHEMA["properties"].keys()) == SCHEMA["required"]  # forces them to match
 
 
-def get_serialized_store(file_path):
+def _get_serialized_store(file_path):
     with base_utilities.change_directory():
         if not os.path.exists(file_path):
             return {
@@ -71,7 +71,7 @@ class Store:
         if not file_path.endswith(".json"):
             file_path += ".json"
         self.file_path = file_path
-        store = get_serialized_store(file_path)
+        store = _get_serialized_store(file_path)
         self.profiles = store["profiles"]
         self.default = store["default"]
 
@@ -101,6 +101,15 @@ class Store:
                 self.profiles.__iter__()
             )  # way overcomplicated, but I wanted to show I knew how to do it efficiently. This just gets the next key in the dict
         self._save()
+
+    def __setattr__(self, name: str, value: any) -> None:
+        if name == "default":
+            if value is not None and value not in self.profiles:
+                raise ValueError(
+                    f"The user '{value}' does not have a profile in this store."
+                )
+
+        super(Store, self).__setattr__(name, value)
 
     def __call__(self):
         return self.__getitem__(self.default)
