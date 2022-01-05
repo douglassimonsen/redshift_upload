@@ -1,24 +1,30 @@
 import json
+import os
 try:
-    from . import base_utilities
+    from .. import base_utilities
 except:
-    import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import base_utilities
 
 
-def get_serialized_store():
+def get_serialized_store(file_patb):
     with base_utilities.change_directory():
-        if not os.path.exists('store.json'):
+        if not os.path.exists(file_patb):
             return {
                 'default': None,
                 'profiles': {},
             }
-        with open('store.json', 'r') as f:
+        with open(file_patb, 'r') as f:
             return json.load(f)
 
 class Store:
-    def __init__(self) -> None:
-        store = get_serialized_store()
+    def __init__(self, file_path='store.json') -> None:
+        """
+        file_path: string
+        The filepath to load and save the store. Can be relative to credential_store.py file directory
+        """
+        self.file_path = file_path
+        store = get_serialized_store(file_path)
         self.profiles = store['profiles']
         self.default = store['default']
 
@@ -47,13 +53,31 @@ class Store:
     def __call__(self):
         return self.__getitem__(self.default)
 
+    def __bool__(self):
+        return bool(self.profiles)
+
     def _save(self):
         with base_utilities.change_directory():
-            with open("store.json", "w") as f:
+            with open(self.file_path, "w") as f:
                 json.dump({
                     'profiles': self.profiles,
                     'default': self.default
                 }, f, indent=4)
+
+    def delete(self):
+        with base_utilities.change_directory():
+            if os.path.exists(self.file_path):  # I know this is *technically* a race condition, but I don't like try/except
+                os.remove(self.file_path)
+
+    def clear(self):
+        self.default = None
+        self.profiles = {}
+        self._save()
+
+
+def set_store(store):
+    global credentials
+    credentials = Store(store)
 
 
 credentials = Store()
