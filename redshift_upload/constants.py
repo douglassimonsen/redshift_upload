@@ -26,7 +26,7 @@ UPLOAD_DEFAULTS = {
     "load_in_parallel": None,  # count of parallel files
     "default_logging": True,
     "skip_checks": False,
-    "on_disk": False,
+    "stream_from_file": False,
     "skip_views": False,
     "node_count": 1,
     "no_header": False,  # indicates the CSV has no header row at the beginning

@@ -13,16 +13,16 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
-def test_load_on_disk(schema):
+def test_load_stream_from_file(schema):
     with base_utilities.change_directory():
         upload(
             source="load_source.csv",
             schema_name=schema,
             table_name=table_name,
-            upload_options={"on_disk": True},
+            upload_options={"stream_from_file": True},
             # log_level="WARNING"
         )
 
 
 if __name__ == "__main__":
-    test_load_on_disk()
+    test_load_stream_from_file()

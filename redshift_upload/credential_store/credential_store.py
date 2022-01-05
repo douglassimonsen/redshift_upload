@@ -10,16 +10,7 @@ except:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import base_utilities
 
-{
-    "host": "cluster-8htl2naazuk5.czdokwtvhved.us-east-1.redshift.amazonaws.com",
-    "port": 5439,
-    "dbname": "test",
-    "redshift_username": "admin",
-    "redshift_password": "Password1",
-    "bucket": "test-library-store-i36trvzczizz",
-    "access_key": "AKIARTZ6RUF63QZK2WG4",
-    "secret_key": "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",
-}
+
 SCHEMA = {
     "type": "object",
     "properties": {
@@ -60,14 +51,14 @@ SCHEMA = {
 assert list(SCHEMA["properties"].keys()) == SCHEMA["required"]  # forces them to match
 
 
-def get_serialized_store(file_patb):
+def get_serialized_store(file_path):
     with base_utilities.change_directory():
-        if not os.path.exists(file_patb):
+        if not os.path.exists(file_path):
             return {
                 "default": None,
                 "profiles": {},
             }
-        with open(file_patb, "r") as f:
+        with open(file_path, "r") as f:
             return json.load(f)
 
 

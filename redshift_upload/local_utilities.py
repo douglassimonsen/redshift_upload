@@ -5,6 +5,8 @@ import sys
 import io
 import csv
 import math
+import itertools
+import collections
 
 try:
     import constants, column_type_utilities  # type: ignore
@@ -28,10 +30,18 @@ class Source:
         dict_reader = csv.DictReader(f)
         self.source = f
         self.fieldnames = dict_reader.fieldnames or []
-        self.num_rows = len(list(dict_reader))
+        self.num_rows = self._count_rows(dict_reader)
         self.predefined_columns: Dict = {}
         self.column_types: Dict = {}
         self.fixed_columns: List = []
+
+    @staticmethod
+    def _count_rows(iterable):
+        # This is 10-25% faster than len(list())
+        # See: https://stackoverflow.com/questions/3345785/getting-number-of-elements-in-an-iterator-in-python
+        counter = itertools.count()
+        collections.deque(zip(iterable, counter), maxlen=0)
+        return next(counter)
 
     def dictrows(self):
         self.source.seek(0)
@@ -113,7 +123,7 @@ def load_source(source: constants.SourceOptions, upload_options=None) -> Source:
         )
         if source.endswith(".csv"):
             f_in = open(source, "r")
-            if upload_options["on_disk"]:
+            if upload_options["stream_from_file"]:
                 return Source(f_in)
             else:
                 f_out = io.StringIO()  # we need to load the file in memory

@@ -49,11 +49,11 @@ def upload(
     upload_options, aws_info = local_utilities.check_coherence(
         schema_name, table_name, upload_options, aws_info
     )
-    if upload_options["on_disk"] and not (
+    if upload_options["stream_from_file"] and not (
         isinstance(source, str) and source.endswith(".csv")
     ):
         raise ValueError(
-            "The on_disk parameter only works when you supply a path to a CSV"
+            "The stream_from_file parameter only works when you supply a path to a CSV"
         )
     if upload_options["default_logging"]:
         local_utilities.initialize_logger(log_level)
