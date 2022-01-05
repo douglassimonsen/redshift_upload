@@ -1,10 +1,6 @@
 import pytest
-import sys
-import pathlib
-
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
-from redshift_upload import upload, testing_utilities  # noqa
-import pandas  # noqa
+from redshift_upload import upload, testing_utilities
+import pandas
 
 table_name = (
     "unit_" + __file__.replace("\\", "/").split("/")[-1].split(".")[0]

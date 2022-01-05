@@ -1,7 +1,3 @@
-import sys
-import pathlib
-
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 from redshift_upload import local_utilities  # noqa
 from redshift_upload.db_interfaces import dummy  # noqa
 import pandas  # noqa

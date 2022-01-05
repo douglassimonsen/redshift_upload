@@ -1,7 +1,3 @@
-import sys
-import pathlib
-
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
 import pytest
 from redshift_upload import upload, testing_utilities  # noqa
 
