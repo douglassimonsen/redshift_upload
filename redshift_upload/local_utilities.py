@@ -109,6 +109,25 @@ def load_source(source: constants.SourceOptions, upload_options=None) -> Source:
     if upload_options is None:
         upload_options = constants.UPLOAD_DEFAULTS
 
+    for key in upload_options.keys():
+        if key not in constants.UPLOAD_DEFAULTS:
+            import fuzzywuzzy.process
+
+            probable_keys = fuzzywuzzy.process.extract(
+                key, constants.UPLOAD_DEFAULTS.keys(), limit=2
+            )
+            probable_keys = [
+                x[0] for i, x in enumerate(probable_keys) if x[1] >= 80 or i == 0
+            ]
+            if len(probable_keys) == 2:
+                raise ValueError(
+                    f"Key '{key}' not a valid upload option. Do you mean '{probable_keys[0]}' or '{probable_keys[1]}'?"
+                )
+            if len(probable_keys) == 1:
+                raise ValueError(
+                    f"Key '{key}' not a valid upload option. Do you mean '{probable_keys[0]}'?"
+                )
+
     if isinstance(
         source, (io.StringIO, io.TextIOWrapper)
     ):  # the second is the type of open(x, 'r')

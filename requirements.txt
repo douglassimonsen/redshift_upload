@@ -3,6 +3,7 @@ numpy
 pandas
 psycopg2
 toposort
+fuzzywuzzy
 
 [credential-manager]
 jsonschema
