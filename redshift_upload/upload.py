@@ -39,9 +39,11 @@ def upload(
 
     if isinstance(aws_info, str):
         log.info(f"Using the stored credentials for user: {aws_info}")
-        aws_info = credential_store.credentials[aws_info] 
+        aws_info = credential_store.credentials[aws_info]
     elif aws_info is None:
-        log.info("Since nothing was passed to parameter 'aws_info', using the default credentials")
+        log.info(
+            "Since nothing was passed to parameter 'aws_info', using the default credentials"
+        )
         aws_info = credential_store.credentials()
 
     upload_options, aws_info = local_utilities.check_coherence(

@@ -4,8 +4,11 @@ import logging
 import json
 import click
 import os
-import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from redshift_upload import credential_store
+
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO paginate results
 
@@ -117,8 +120,8 @@ def create_stack(stack):
     creds = create_redshift_users(redshift_id)
     creds["bucket"] = bucket
     creds |= get_access_keys(usernames[0])
-    credential_store.set_store('test-library')
-    credential_store.credentials['test-library'] = creds
+    credential_store.set_store("test-library")
+    credential_store.credentials["test-library"] = creds
 
 
 def delete_stack(stack):

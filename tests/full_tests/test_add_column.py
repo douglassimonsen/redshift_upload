@@ -29,9 +29,11 @@ def test_add_column(schema):
     )
     with pytest.raises(NotImplementedError):
         upload(
-            source=df2, schema_name=schema, table_name=table_name,
+            source=df2,
+            schema_name=schema,
+            table_name=table_name,
         )
 
 
 if __name__ == "__main__":
-    test_add_column('public')
+    test_add_column("public")

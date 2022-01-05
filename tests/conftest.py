@@ -1,5 +1,7 @@
 import pytest
-import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parents[1]))
+import sys, pathlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).parents[1]))
 from redshift_upload import credential_store
 
 
@@ -14,7 +16,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True)
 def set_store():
-    credential_store.set_store('test-library')
+    credential_store.set_store("test-library")
 
 
 @pytest.fixture()

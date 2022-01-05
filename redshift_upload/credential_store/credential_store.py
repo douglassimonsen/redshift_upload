@@ -1,9 +1,12 @@
 import json
 import os
+
 try:
     from .. import base_utilities
 except:
-    import sys; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import sys
+
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import base_utilities
 
 
@@ -11,28 +14,31 @@ def get_serialized_store(file_patb):
     with base_utilities.change_directory():
         if not os.path.exists(file_patb):
             return {
-                'default': None,
-                'profiles': {},
+                "default": None,
+                "profiles": {},
             }
-        with open(file_patb, 'r') as f:
+        with open(file_patb, "r") as f:
             return json.load(f)
 
+
 class Store:
-    def __init__(self, file_path='store.json') -> None:
+    def __init__(self, file_path="store.json") -> None:
         """
         file_path: string
         The filepath to load and save the store. Can be relative to credential_store.py file directory
         """
         if not file_path.endswith(".json"):
-            file_path += '.json'
+            file_path += ".json"
         self.file_path = file_path
         store = get_serialized_store(file_path)
-        self.profiles = store['profiles']
-        self.default = store['default']
+        self.profiles = store["profiles"]
+        self.default = store["default"]
 
     def __getitem__(self, key):
         if not isinstance(key, str):
-            raise KeyError(f"The profile name must be a string. You passed the value: {key}")
+            raise KeyError(
+                f"The profile name must be a string. You passed the value: {key}"
+            )
         try:
             return self.profiles[key]
         except KeyError:
@@ -49,7 +55,9 @@ class Store:
         if not self.profiles:
             self.default = None
         elif key == self.default:
-            self.default = next(self.profiles.__iter__())  # way overcomplicated, but I wanted to show I knew how to do it efficiently. This just gets the next key in the dict
+            self.default = next(
+                self.profiles.__iter__()
+            )  # way overcomplicated, but I wanted to show I knew how to do it efficiently. This just gets the next key in the dict
         self._save()
 
     def __call__(self):
@@ -59,22 +67,23 @@ class Store:
         return bool(self.profiles)
 
     def __str__(self):
-        return f'''
+        return f"""
         default: {self.default}
         profiles: {list(self.profiles.keys())}
-        '''
+        """
 
     def _save(self):
         with base_utilities.change_directory():
             with open(self.file_path, "w") as f:
-                json.dump({
-                    'profiles': self.profiles,
-                    'default': self.default
-                }, f, indent=4)
+                json.dump(
+                    {"profiles": self.profiles, "default": self.default}, f, indent=4
+                )
 
     def delete(self):
         with base_utilities.change_directory():
-            if os.path.exists(self.file_path):  # I know this is *technically* a race condition, but I don't like try/except
+            if os.path.exists(
+                self.file_path
+            ):  # I know this is *technically* a race condition, but I don't like try/except
                 os.remove(self.file_path)
 
     def clear(self):

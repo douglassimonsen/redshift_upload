@@ -28,4 +28,4 @@ def test_no_data(schema):
 
 
 if __name__ == "__main__":
-    test_no_data('public')
+    test_no_data("public")

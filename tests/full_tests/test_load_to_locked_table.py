@@ -35,7 +35,7 @@ def test_drop_table(schema):
             table_name="unit_test_simple_upload_incompatible_types",
         )
     interface
-    # I'm hoping this will pause the GC. The issue is the connection is being closed 
+    # I'm hoping this will pause the GC. The issue is the connection is being closed
     # and the exclusive lock removed before the second upload can run into it
 
 

@@ -7,7 +7,7 @@ except:
     import credential_store
 log = logging.getLogger("redshift_utilities-test")
 
-credential_store.set_store('test-library')
+credential_store.set_store("test-library")
 
 
 def drop_tables(tables, aws_creds=None):
