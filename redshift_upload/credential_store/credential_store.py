@@ -1,5 +1,6 @@
 import json
 import os
+import jsonschema
 
 try:
     from .. import base_utilities
@@ -8,6 +9,55 @@ except:
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import base_utilities
+
+{
+    "host": "cluster-8htl2naazuk5.czdokwtvhved.us-east-1.redshift.amazonaws.com",
+    "port": 5439,
+    "dbname": "test",
+    "redshift_username": "admin",
+    "redshift_password": "Password1",
+    "bucket": "test-library-store-i36trvzczizz",
+    "access_key": "AKIARTZ6RUF63QZK2WG4",
+    "secret_key": "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",
+}
+SCHEMA = {
+    "type": "object",
+    "properties": {
+        "host": {"type": "string"},
+        "port": {
+            "type": "integer",
+            "minimum": 1150,
+            "maximum": 65535,
+        },  # port range found in the web creation wizard page
+        "dbname": {"type": "string"},
+        "redshift_username": {"type": "string"},
+        "redshift_password": {"type": "string"},
+        "bucket": {
+            "type": "string",
+            "pattern": "(?=^.{3,63}$)(?!xn--)([a-z0-9](?:[a-z0-9-]*)[a-z0-9])$",
+        },  # https://stackoverflow.com/a/62673054/6465644
+        "access_key": {
+            "type": "string",
+            "pattern": "[A-Z0-9]{20}",
+        },  # it's just all CAPS and numbers
+        "secret_key": {
+            "type": "string",
+            "pattern": "[A-Za-z0-9/+=]{40}",
+        },  # it's a base-64 string
+    },
+    "required": [
+        "host",
+        "port",
+        "dbname",
+        "redshift_username",
+        "redshift_password",
+        "bucket",
+        "access_key",
+        "secret_key",
+    ],  # if another property is added, be sure to remember to add here too
+    "additionalProperties": False,
+}
+assert list(SCHEMA["properties"].keys()) == SCHEMA["required"]  # forces them to match
 
 
 def get_serialized_store(file_patb):
@@ -45,6 +95,7 @@ class Store:
             raise KeyError("That profile does not exist in the store")
 
     def __setitem__(self, key, profile):
+        jsonschema.validate(instance=profile, schema=SCHEMA)
         self.profiles[key] = profile
         if self.default is None:
             self.default = key

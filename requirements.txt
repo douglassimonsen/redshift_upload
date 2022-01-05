@@ -4,5 +4,8 @@ pandas
 psycopg2
 toposort
 
+[credential-manager]
+jsonschema
+
 [build]
 pre-commit

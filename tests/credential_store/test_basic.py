@@ -1,6 +1,18 @@
 from redshift_upload import credential_store  # noqa
 import pytest
 import os
+from jsonschema.exceptions import ValidationError
+
+sample_creds = {
+    "host": "cluster.redshift.amazonaws.com",
+    "port": 5439,
+    "dbname": "test",
+    "redshift_username": "user",
+    "redshift_password": "pass",
+    "bucket": "bucket-name",
+    "access_key": "AAAAAAAAAA0000000000",
+    "secret_key": "AAAAAAAAAAAbbbbbbbbb999999999999999999/=",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -14,19 +26,24 @@ def test_path_fix():
     assert credential_store.credentials.file_path.endswith(".json")
 
 
+def test_bad_creds():
+    with pytest.raises(ValidationError):
+        credential_store.credentials["a"] = {1: 2}
+
+
 def test_add_users():
-    credential_store.credentials["a"] = {1: 2}
+    credential_store.credentials["a"] = sample_creds
     assert credential_store.credentials.default == "a"
     assert len(credential_store.credentials.profiles) == 1
-    credential_store.credentials["b"] = {1: 2}
+    credential_store.credentials["b"] = sample_creds
     assert credential_store.credentials.default == "a"
     assert len(credential_store.credentials.profiles) == 2
 
 
 def test_delete_users():
-    credential_store.credentials["a"] = {1: 2}
-    credential_store.credentials["b"] = {1: 2}
-    credential_store.credentials["c"] = {1: 2}
+    credential_store.credentials["a"] = sample_creds
+    credential_store.credentials["b"] = sample_creds
+    credential_store.credentials["c"] = sample_creds
 
     del credential_store.credentials["a"]
     assert credential_store.credentials.default == "b"
@@ -42,15 +59,15 @@ def test_delete_users():
 
 
 def test_get_default_user():
-    credential_store.credentials["a"] = {1: 2}
-    assert credential_store.credentials() == {1: 2}
+    credential_store.credentials["a"] = sample_creds
+    assert credential_store.credentials() == sample_creds
     del credential_store.credentials["a"]
     with pytest.raises(KeyError):
         assert credential_store.credentials()
 
 
 def test_clear_store():
-    credential_store.credentials["a"] = {1: 2}
+    credential_store.credentials["a"] = sample_creds
     assert credential_store.credentials
     credential_store.credentials.clear()
     assert not credential_store.credentials
