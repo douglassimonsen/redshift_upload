@@ -1,7 +1,6 @@
 import boto3
 import time
 import logging
-import json
 import click
 import os
 import sys
