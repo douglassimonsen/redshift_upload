@@ -1,7 +1,7 @@
 try:
-    from cli import show_help, add_user
+    from cli import show_help, show_add_user
 except ModuleNotFoundError:
-    from .cli import show_help, add_user
+    from .cli import show_help, show_add_user
 import click
 
 
@@ -28,7 +28,7 @@ def help():
 @click.command()
 def add_user():
     "Starts a cli to create a user for the library"
-    add_user.main()
+    show_add_user.main()
 
 
 cli.add_command(upload_args)
