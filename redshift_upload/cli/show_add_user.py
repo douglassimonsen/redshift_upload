@@ -1,5 +1,16 @@
-from ..credential_store import credential_store
+try:
+    from ..credential_store import credential_store
+except ImportError:
+    import os, sys
+
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from credential_store import credential_store
 import jsonschema
+import psycopg2
+import boto3
+import random
+import botocore.exceptions
+
 
 params = [
     "host",
@@ -22,6 +33,9 @@ if default_user is not None:
     default_params = credential_store.credentials[default_user]
 else:
     default_params = {}
+s3_name = "library_test/" + "".join(
+    random.choices([chr(65 + i) for i in range(26)], k=20)
+)  # needs to be out here so repeated s3 checks don't create orphan objects
 
 
 def get_val(param):
@@ -49,6 +63,7 @@ def yes_no(question):
 
 
 def fix_schema(user):
+    print("Testing it matches the credential JSONSchema...")
     try:
         jsonschema.validate(user, credential_store.SCHEMA)
         return
@@ -56,32 +71,49 @@ def fix_schema(user):
         print(f"{e.path[0]}: {e.message}")
         user[e.path[0]] = get_val(e.path[0])
         fix_schema(user)
+    print("Schema successfully validated!")
 
 
-def test_s3():
+def test_s3(user):
     # test accesss/secret key
     # test bucket can be written to
     # test bucket can be deleted from
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=user["access_key"],
+        aws_secret_access_key=user["secret_key"],
+    )
+    obj = s3.Object(user["bucket"], s3_name)
+    try:
+        obj.put(Body=b"test")
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "InvalidAccessKeyId":
+            print("It looks like the access key doesn't exist. Try another?")
+            user["access_key"] = get_val("access_key")
+            user["secret_key"] = get_val("secret_key")
+            fix_schema(user)
+            test_s3(user)
+
+    obj.delete()
+    exit()
     pass
 
 
-def test_redshift():
+def test_redshift(user):
     # test create/delete table
     pass
 
 
 def test_connections(user):
-    test_s3()
-    test_redshift()
+    test_s3(user)
+    test_redshift(user)
 
 
 def test_vals(user):
     do_tests = "y"  # yes_no("Do you want to verify these values are correct?")
     if do_tests == "n":
         return
-    print("Testing it matches the credential JSONSchema...")
     fix_schema(user)
-    print("Schema successfully validated!")
     print("Testing connections now")
     test_connections(user)
     print("Connections tested successfully")
