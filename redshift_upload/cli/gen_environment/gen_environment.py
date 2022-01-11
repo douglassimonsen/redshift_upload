@@ -91,6 +91,7 @@ def create_redshift_users(redshift_id):
         "host": cluster_info["Endpoint"]["Address"],
         "port": cluster_info["Endpoint"]["Port"],
         "dbname": cluster_info["DBName"],
+        "default_schema": "public",
         "redshift_username": cluster_info["MasterUsername"],
         "redshift_password": "Password1",
     }

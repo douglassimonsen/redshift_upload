@@ -192,7 +192,29 @@ store_1 = credential_store.set_store('test')
 store_2 = credential_store.set_store('test.json')
 assert store_1.file_path == store_2.file_path
 ```
+## Required permissions for library
+The AWS keys for this library should have at least the following permissions
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::<bucket-name>/*",
+                "arn:aws:s3:::<bucket-name>"
+            ],
+            "Effect": "Allow",
+            "Sid": "basicS3Access"
+        }
+    ]
 
+```
 
 # Contributing
 
