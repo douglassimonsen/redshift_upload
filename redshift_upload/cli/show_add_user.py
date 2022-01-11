@@ -33,7 +33,7 @@ default_user = credential_store.credentials.default
 if default_user is not None:
     default_params = credential_store.credentials[default_user]
 else:
-    default_params = {}
+    default_params = {"port": 5439, "default_schema": "public"}
 s3_name = "library_test/" + "".join(
     random.choices([chr(65 + i) for i in range(26)], k=20)
 )  # needs to be out here so repeated s3 checks don't create orphan objects
@@ -217,21 +217,6 @@ def test_vals(user):
     print("Testing connections now")
     test_connections(user)
     print("Connections tested successfully")
-
-
-user = {
-    "host": "cluster-bud7ih5pdkbw.czdokwtvhved.us-east-1.redshift.amazonaws.com",
-    "port": 5439,
-    "dbname": "test",
-    "redshift_username": "test",
-    "redshift_password": "Testtes1",
-    "default_schema": "public",
-    "bucket": "test-library-store-1urzygqmztkxc",
-    "access_key": "AKIARTZ6RUF6RY7VLCO7",
-    "secret_key": "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",
-}
-test_vals(user)
-exit()
 
 
 def main():
