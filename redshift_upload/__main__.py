@@ -1,7 +1,9 @@
 try:
     from cli import show_help, show_add_user
+    from cli.gen_environment import gen_environment
 except ModuleNotFoundError:
     from .cli import show_help, show_add_user
+    from .cli.gen_environment import gen_environment
 import click
 
 
@@ -12,8 +14,8 @@ def cli():
 
 
 @click.command()
-def upload_args():
-    "Shows the valid arguments that can be entered in upload_args"
+def explain_upload_args():
+    "Explains the valid arguments for upload_args"
     show_help.upload_args()
 
 
@@ -31,8 +33,9 @@ def add_user():
     show_add_user.main()
 
 
-cli.add_command(upload_args)
+cli.add_command(explain_upload_args)
 cli.add_command(help)
 cli.add_command(add_user)
+cli.add_command(gen_environment.gen_environment)
 if __name__ == "__main__":
     cli()

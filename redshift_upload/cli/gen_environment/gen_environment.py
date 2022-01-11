@@ -5,9 +5,16 @@ import click
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from redshift_upload import credential_store
-
+try:
+    from ...credential_store import credential_store
+except ImportError:
+    sys.path.insert(
+        0,
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        ),
+    )
+    from credential_store import credential_store
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO paginate results
 
@@ -114,7 +121,7 @@ def get_access_keys(username):
 
 
 def create_stack(stack):
-    # build_stack(stack)
+    build_stack(stack)
     redshift_id, bucket, usernames = get_stack_resources(stack)
     creds = create_redshift_users(redshift_id)
     creds["bucket"] = bucket
@@ -145,7 +152,8 @@ def delete_stack(stack):
     help="If this flag is set, the stack will be removed. Otherwise the stack will be created",
 )
 @click.option("--logging-level", default="ERROR", type=str)
-def main(stack_name, destroy, logging_level):
+def gen_environment(stack_name, destroy, logging_level):
+    "Sets up a basic Redshift environment for testing"
     logging.basicConfig(
         format="[%(name)s, %(levelname)s] %(asctime)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
@@ -158,4 +166,4 @@ def main(stack_name, destroy, logging_level):
 
 
 if __name__ == "__main__":
-    main()
+    gen_environment()
