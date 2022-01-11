@@ -168,8 +168,19 @@ class Interface:
                     view_privileges,
                     {"schema_name": schema_name, "view_name": view_name},
                 )
-                grants = ", ".join(x[0] for x in cursor.fetchall())
-                return f"GRANT SELECT ON {schema_name}.{view_name} to {grants}"
+                grant_dict = {}
+                for row in cursor.fetchall():
+                    for action, has_permission in zip(
+                        ["select", "insert", "update", "delete", "references"], row[1:]
+                    ):
+                        if has_permission:
+                            grant_dict.setdefault(action, []).append(f'"{row[0]}"')
+                grants = []
+                for action, users in grant_dict.items():
+                    grants.append(
+                        f'GRANT {action} on {schema_name}.{view_name} to {", ".join(users)}'
+                    )
+                return "\n\n".join(grants)
 
         def format_row(row: List) -> Dict:
             return {
