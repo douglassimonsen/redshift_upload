@@ -11,6 +11,8 @@ import boto3
 import random
 import botocore.exceptions
 import botocore.errorfactory
+import colorama
+import json
 
 
 params = [
@@ -42,6 +44,16 @@ table_name = "library_test_" + "".join(
 )  # needs to be out here so repeated redshift checks don't create orphan objects
 
 
+def colorize(text, level="INFO"):
+    level_format = {
+        "INFO": colorama.Style.BRIGHT + colorama.Fore.CYAN,
+        "SUCCESS": colorama.Fore.GREEN,
+        "WARNING": colorama.Fore.YELLOW,
+        "ERROR": colorama.Fore.RED,
+    }
+    return level_format[level] + text + colorama.Style.RESET_ALL
+
+
 def get_val(param):
     question = f"What is the value for {param}"
     default_val = None
@@ -51,7 +63,7 @@ def get_val(param):
         question += f" (default: {default_val})"
 
     question += ": "
-    ret = input(question)
+    ret = input(colorize(question))
     if len(ret) == 0 and default_val is not None:
         return default_val
     if param == "port":
@@ -60,7 +72,7 @@ def get_val(param):
 
 
 def yes_no(question):
-    raw = input(f"{question} (y/n): ").lower()
+    raw = input(colorize(f"{question} (y/n): ")).lower()
     if raw not in ("y", "n"):
         return yes_no(question)
     return raw
@@ -70,16 +82,16 @@ def fix_schema(user):
     print("Testing it matches the credential JSONSchema...")
     try:
         jsonschema.validate(user, credential_store.SCHEMA)
-        print("Schema successfully validated!")
+        print(colorize("Schema successfully validated!", "SUCCESS"))
         return
     except jsonschema.exceptions.ValidationError as e:
-        print(f"{e.path[0]}: {e.message}")
+        print(colorize(f"{e.path[0]}: {e.message}", "WARNING"))
         user[e.path[0]] = get_val(e.path[0])
         return fix_schema(user)
 
 
 def unhandled_aws_error(error):
-    print("Unhandled error :(")
+    print(colorize("Unhandled error :(", "ERROR"))
     print(error)
     print(error.response)
     raise ValueError
@@ -89,7 +101,7 @@ def test_s3(user):
     # test accesss/secret key
     # test bucket can be written to
     # test bucket can be deleted from
-    print("\tTesting S3 permissions")
+    print(colorize("Testing S3 permissions"))
     s3 = boto3.resource(
         "s3",
         aws_access_key_id=user["access_key"],
@@ -100,7 +112,12 @@ def test_s3(user):
         obj.put(Body=b"test")
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "InvalidAccessKeyId":
-            print("It looks like the access key doesn't exist. Try another?")
+            print(
+                colorize(
+                    "It looks like the access key doesn't exist. Try another?",
+                    "WARNING",
+                )
+            )
             user["access_key"] = get_val("access_key")
             user["secret_key"] = get_val("secret_key")
             fix_schema(user)
@@ -110,14 +127,21 @@ def test_s3(user):
             and e.operation_name == "PutObject"
         ):
             print(
-                "It looks like the access key doesn't have permission to write to the specified bucket. Try new access keys or bucket"
+                colorize(
+                    "It looks like the access key doesn't have permission to write to the specified bucket. Try new access keys or bucket",
+                    "WARNING",
+                )
             )
             user["access_key"] = get_val("access_key")
             user["secret_key"] = get_val("secret_key")
             fix_schema(user)
             return test_s3(user)
         elif e.response["Error"]["Code"] == "NoSuchBucket":
-            print("It looks like that bucket doesn't exist. Try another?")
+            print(
+                colorize(
+                    "It looks like that bucket doesn't exist. Try another?", "WARNING"
+                )
+            )
             user["bucket"] = get_val("bucket")
             fix_schema(user)
             return test_s3(user)
@@ -129,17 +153,20 @@ def test_s3(user):
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "AccessDenied":
             print(
-                "It looks like the access key can't delete things. That's fine, the library will overwrite the blob with a blank body so it doesn't bloat costs"
+                colorize(
+                    "It looks like the access key can't delete things. That's fine, the library will overwrite the blob with a blank body so it doesn't bloat costs",
+                    "WARNING",
+                )
             )
         else:
             unhandled_aws_error(e)
 
-    print("\tS3 permissions tested successfully")
+    print(colorize("S3 permissions tested successfully", "SUCCESS"))
 
 
 def test_redshift(user):
     # test create/delete table
-    print("\tTesting Redshift Permissions")
+    print(colorize("Testing Redshift Permissions"))
     try:
         conn = psycopg2.connect(
             host=user["host"],
@@ -151,24 +178,37 @@ def test_redshift(user):
         )
     except psycopg2.OperationalError as e:
         if "FATAL:  database" in e.args[0]:
-            print("It looks like that database doesn't exist. Try entering another?")
+            print(
+                colorize(
+                    "It looks like that database doesn't exist. Try entering another?",
+                    "WARNING",
+                )
+            )
             user["dbname"] = get_val("dbname")
             fix_schema(user)
             return test_redshift(user)
         elif "Unknown host" in e.args[0]:
-            print("It looks like that host doesn't exist. Try entering another?")
+            print(
+                colorize(
+                    "It looks like that host doesn't exist. Try entering another?",
+                    "WARNING",
+                )
+            )
             user["host"] = get_val("host")
             fix_schema(user)
             return test_redshift(user)
         elif "timeout expired" in e.args[0]:
             print(
-                "The connection timed out. This normally happens when the port is wrong. Try entering another?"
+                colorize(
+                    "The connection timed out. This normally happens when the port is wrong. Try entering another?",
+                    "WARNING",
+                )
             )
             user["port"] = get_val("port")
             fix_schema(user)
             return test_redshift(user)
         elif "password authentication failed" in e.args[0]:
-            print("The credentials didn't work. Try others?")
+            print(colorize("The credentials didn't work. Try others?", "WARNING"))
             user["redshift_username"] = get_val("redshift_username")
             user["redshift_password"] = get_val("redshift_password")
             fix_schema(user)
@@ -185,13 +225,21 @@ def test_redshift(user):
             f"create table {full_table_name} (test_col varchar(10), test_col2 int)"
         )
     except psycopg2.errors.InvalidSchemaName:
-        print("It looks like that schema doesn't exist. Want to specify another?")
+        print(
+            colorize(
+                "It looks like that schema doesn't exist. Want to specify another?",
+                "WARNING",
+            )
+        )
         user["default_schema"] = get_val("default_schema")
         fix_schema(user)
         return test_redshift(user)
     except psycopg2.errors.InsufficientPrivilege:
         print(
-            "It looks like you don't have permissions to create tables in this schema. Try another?"
+            colorize(
+                "It looks like you don't have permissions to create tables in this schema. Try another?",
+                "WARNING",
+            )
         )
         user["default_schema"] = get_val("default_schema")
         fix_schema(user)
@@ -201,7 +249,7 @@ def test_redshift(user):
     cursor.execute(f"drop table {full_table_name}")
 
     conn.close()
-    print("\tRedshift permissions tested successfully")
+    print(colorize("Redshift permissions tested successfully", "SUCCESS"))
 
 
 def test_connections(user):
@@ -214,9 +262,9 @@ def test_vals(user):
     if do_tests == "n":
         return
     fix_schema(user)
-    print("Testing connections now")
+    print(colorize("Testing connections now"))
     test_connections(user)
-    print("Connections tested successfully")
+    print(colorize("Connections tested successfully", "SUCCESS"))
 
 
 def main():
@@ -224,7 +272,8 @@ def main():
     user = {}
     for param in params:
         user[param] = get_val(param)
-    print(user)
+    print(colorize("This is the data you've entered:"))
+    print("\n" + json.dumps(user, indent=4) + "\n\n")
     test_vals(user)
 
 

@@ -7,6 +7,7 @@ import csv
 import math
 import itertools
 import collections
+import colorama
 
 try:
     import constants, column_type_utilities  # type: ignore
@@ -52,6 +53,28 @@ class Source:
         return csv.reader(self.source)
 
 
+class CustomFormatter(logging.Formatter):
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        logging.DEBUG: colorama.Fore.BLUE + format + reset,
+        logging.INFO: colorama.Fore.GREEN + format + reset,
+        logging.WARNING: colorama.Fore.YELLOW + format + reset,
+        logging.ERROR: colorama.Fore.RED + format + reset,
+        logging.CRITICAL: colorama.Fore.RED + format + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
+        return formatter.format(record)
+
+
 def initialize_logger(log_level: str) -> None:
     """
     Sets up logging for the upload
@@ -61,11 +84,7 @@ def initialize_logger(log_level: str) -> None:
     if log.hasHandlers():
         return
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(
-        "[%(name)s] %(asctime)s - %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    handler.setFormatter(formatter)
+    handler.setFormatter(CustomFormatter())
     log.addHandler(handler)
 
 
