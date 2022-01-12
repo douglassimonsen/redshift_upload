@@ -216,12 +216,12 @@ def reinstantiate_views(
 
     reload_order = gen_order(views)
 
-    conn = interface.get_db_conn()
-    cursor = conn.cursor()
     log.info("Reinstantiating Redshift views")
     with base_utilities.change_directory():
         for view_name in reload_order:
             view = views[view_name]
+            conn = interface.get_db_conn(user=view["owner"])
+            cursor = conn.cursor()
             try:
                 if drop_table is True:
                     cursor.execute(view["text"])

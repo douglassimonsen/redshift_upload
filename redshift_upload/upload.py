@@ -113,7 +113,8 @@ def upload(
         f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!"
     )
     if upload_options["close_on_end"]:
-        interface.get_db_conn().close()
+        for conn in interface._db_conn.values():
+            conn.close()
         del interface._s3_conn
     else:
         return interface
