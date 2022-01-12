@@ -13,8 +13,10 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
     import base_utilities, constants
+    from credential_store import credential_store
 except ModuleNotFoundError:
     from .. import base_utilities, constants
+    from ..credential_store import credential_store
 log = logging.getLogger("redshift_utilities")
 
 with base_utilities.change_directory():
@@ -39,7 +41,7 @@ class Interface:
         self.table_name = table_name
         self.s3_name = f"{schema_name}_{table_name}_{datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
 
-        self._db_conn = None
+        self._db_conn = {}
         self._s3_conn = None
 
         self.default_timeout = default_timeout
@@ -61,22 +63,26 @@ class Interface:
             self.check_table_exists()
         )  # must be initialized after the _db, _s3_conn
 
-    def get_db_conn(self) -> constants.Connection:
+    def get_db_conn(self, user=None) -> constants.Connection:
         """
         Gets DB connection. Caches connection for later use
         """
-        if self._db_conn is None:
-            self._db_conn = psycopg2.connect(
-                host=self.aws_info["host"],
-                dbname=self.aws_info["dbname"],
-                port=self.aws_info["port"],
-                user=self.aws_info["redshift_username"],
-                password=self.aws_info["redshift_password"],
-                connect_timeout=180,
+        if user is None:
+            user = self.aws_info["redshift_username"]
+
+        if user not in self._db_conn:
+            self._db_conn[user] = psycopg2.connect(
+                host=credential_store.credentials.profiles[user]["host"],
+                dbname=credential_store.credentials.profiles[user]["dbname"],
+                port=credential_store.credentials.profiles[user]["port"],
+                user=credential_store.credentials.profiles[user]["redshift_username"],
+                password=credential_store.credentials.profiles[user][
+                    "redshift_password"
+                ],
             )
-            cursor = self._db_conn.cursor()  # setting up defaults for the session
+            cursor = self._db_conn[user].cursor()  # setting up defaults for the session
             cursor.execute(f"SET statement_timeout = {self.default_timeout}")
-        return self._db_conn
+        return self._db_conn[user]
 
     def get_s3_conn(self) -> constants.Connection:
         """

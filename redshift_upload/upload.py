@@ -101,7 +101,7 @@ def upload(
     )
     if (
         not upload_options["skip_views"] and interface.table_exists
-    ):  # still need to update those materialized views, so we can't check drop_table here
+    ):  # still need to update those materialized views, so we can't check drop_table here. We can ignore normal views though!
         redshift_utilities.reinstantiate_views(
             interface, upload_options["drop_table"], upload_options["grant_access"]
         )
@@ -113,7 +113,7 @@ def upload(
         f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!"
     )
     if upload_options["close_on_end"]:
-        interface._db_conn.close()
+        interface.get_db_conn().close()
         del interface._s3_conn
     else:
         return interface

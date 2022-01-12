@@ -24,6 +24,17 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
+def get_conn(user):
+    return psycopg2.connect(
+        host=user["host"],
+        dbname=user["dbname"],
+        port=user["port"],
+        user=user["redshift_username"],
+        password=user["redshift_password"],
+        connect_timeout=5,
+    )
+
+
 def test_conflict():
     upload(
         source=df,
@@ -31,14 +42,7 @@ def test_conflict():
         aws_info="analyst1",
     )
     user2 = credential_store.credentials.profiles["analyst2"]
-    with psycopg2.connect(
-        host=user2["host"],
-        dbname=user2["dbname"],
-        port=user2["port"],
-        user=user2["redshift_username"],
-        password=user2["redshift_password"],
-        connect_timeout=5,
-    ) as conn:
+    with get_conn(user2) as conn:
         cursor = conn.cursor()
         cursor.execute(
             f"create view public.unit_test_conflict_view as (select * from public.{table_name})"
@@ -47,8 +51,32 @@ def test_conflict():
         source=df,
         table_name=table_name,
         aws_info="analyst1",
+        upload_options={"close_on_end": False, "drop_table": True},
     )
+    with get_conn(user2) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            select pg_views.viewowner
+            from pg_class
+
+            left join pg_namespace 
+            on pg_namespace.oid = pg_class.relnamespace
+
+            left JOIN pg_views 
+            on pg_views.schemaname = pg_namespace.nspname 
+            and pg_views.viewname = pg_class.relname
+            where relname = 'unit_test_conflict_view'
+            """
+        )
+        owner = cursor.fetchone()
+        if owner is None:
+            raise ValueError("The view has disappeared")
+        elif owner[0] != "analyst2":
+            raise ValueError("The view isn't re-assigned to the correct user")
 
 
 if __name__ == "__main__":
+    testing_utilities.drop_tables(table_name)
     test_conflict()
+    # testing_utilities.drop_tables(table_name)
