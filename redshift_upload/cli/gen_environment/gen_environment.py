@@ -4,6 +4,7 @@ import logging
 import click
 import os
 import sys
+import psycopg2
 
 try:
     from ...credential_store import credential_store
@@ -87,14 +88,48 @@ def create_redshift_users(redshift_id):
     cluster_info = redshift.describe_clusters(ClusterIdentifier=redshift_id)[
         "Clusters"
     ][0]
-    return {
-        "host": cluster_info["Endpoint"]["Address"],
-        "port": cluster_info["Endpoint"]["Port"],
-        "dbname": cluster_info["DBName"],
-        "default_schema": "public",
-        "redshift_username": cluster_info["MasterUsername"],
-        "redshift_password": "Password1",
-    }
+    ret = [
+        {
+            "host": cluster_info["Endpoint"]["Address"],
+            "port": cluster_info["Endpoint"]["Port"],
+            "dbname": cluster_info["DBName"],
+            "default_schema": "public",
+            "redshift_username": cluster_info["MasterUsername"],
+            "redshift_password": "Password1",
+        },
+        {
+            "host": cluster_info["Endpoint"]["Address"],
+            "port": cluster_info["Endpoint"]["Port"],
+            "dbname": cluster_info["DBName"],
+            "default_schema": "public",
+            "redshift_username": "analyst1",
+            "redshift_password": "Password1",
+        },
+        {
+            "host": cluster_info["Endpoint"]["Address"],
+            "port": cluster_info["Endpoint"]["Port"],
+            "dbname": cluster_info["DBName"],
+            "default_schema": "public",
+            "redshift_username": "analyst2",
+            "redshift_password": "Password1",
+        },
+    ]
+    with psycopg2.connect(
+        host=ret[0]["host"],
+        dbname=ret[0]["dbname"],
+        port=ret[0]["port"],
+        user=ret[0]["redshift_username"],
+        password=ret[0]["redshift_password"],
+        connect_timeout=5,
+    ) as conn:
+        cursor = conn.cursor()
+        for user in ["analyst1", "analyst2"]:
+            cursor.execute(f"create user {user} with password 'Password1'")
+            cursor.execute(f"grant usage on schema public to {user}")
+            cursor.execute(f"grant all on all tables in schema public to {user}")
+            cursor.execute(f"grant select on table stv_locks to {user}")
+            cursor.execute(f"grant select on table svv_table_info to {user}")
+    return ret
 
 
 def get_stack_resources(stack):
@@ -124,16 +159,19 @@ def get_access_keys(username):
 def create_stack(stack):
     build_stack(stack)
     redshift_id, bucket, usernames = get_stack_resources(stack)
-    creds = create_redshift_users(redshift_id)
-    creds["bucket"] = bucket
-    creds |= get_access_keys(usernames[0])
+
     credential_store.set_store("test-library")
-    credential_store.credentials["test-library"] = creds
+    credential_store.credentials.clear()
+    access_keys = get_access_keys(usernames[0])
+    for name, creds in zip(
+        ["admin", "analyst1", "analyst2"], create_redshift_users(redshift_id)
+    ):
+        creds["bucket"] = bucket
+        creds |= access_keys
+        credential_store.credentials[name] = creds
 
 
 def delete_stack(stack):
-    # aws s3 rm s3://
-    # aws cloudformation delete-stack --stack-name test
     _, bucket, _ = get_stack_resources(stack)
     for obj in s3.Bucket(bucket).objects.filter():
         s3.Object(bucket, obj.key).delete()

@@ -215,7 +215,9 @@ The AWS keys for this library should have at least the following permissions
     ]
 
 ```
-
+The redshift users must have access to the following system tables:
+1. SVV_TABLE_INFO
+2. STV_LOCKS
 # Contributing
 
 This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit hook to ensure consistent styling. To enable this, run `pre-commit install` in the directory.
