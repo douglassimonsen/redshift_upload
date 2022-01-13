@@ -228,3 +228,4 @@ This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit 
 1. Update the version in `redshift_upload/__init__.py`
 2. Update the version in `setup.py`
 3. Run `python setup.py sdist`
+4. Run `git tag v<version>`
