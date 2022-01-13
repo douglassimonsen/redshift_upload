@@ -14,44 +14,61 @@ except:
 SCHEMA = {
     "type": "object",
     "properties": {
-        "host": {"type": "string"},
-        "port": {
-            "type": "integer",
-            "minimum": 1150,
-            "maximum": 65535,
-        },  # port range found in the web creation wizard page
-        "dbname": {"type": "string"},
-        "default_schema": {"type": "string"},
-        "redshift_username": {"type": "string"},
-        "redshift_password": {"type": "string"},
-        "bucket": {
-            "type": "string",
-            "pattern": "(?=^.{3,63}$)(?!xn--)([a-z0-9](?:[a-z0-9-]*)[a-z0-9])$",
-        },  # https://stackoverflow.com/a/62673054/6465644
-        "access_key": {
-            "type": "string",
-            "pattern": "[A-Z0-9]{20}",
-        },  # it's just all CAPS and numbers
-        "secret_key": {
-            "type": "string",
-            "pattern": "[A-Za-z0-9/+=]{40}",
-        },  # it's a base-64 string
+        "constants": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "pattern": "(?=^.{3,63}$)(?!xn--)([a-z0-9](?:[a-z0-9-]*)[a-z0-9])$",
+                },  # https://stackoverflow.com/a/62673054/6465644
+                "default_schema": {"type": "string"},
+            },
+            "additionalProperties": False,
+            "required": ["bucket", "default_schema"],
+        },
+        "s3": {
+            "type": "object",
+            "properties": {
+                "access_key": {
+                    "type": "string",
+                    "pattern": "[A-Z0-9]{20}",
+                },  # it's just all CAPS and numbers
+                "secret_key": {
+                    "type": "string",
+                    "pattern": "[A-Za-z0-9/+=]{40}",
+                },  # it's a base-64 string
+            },
+            "additionalProperties": False,
+            "required": ["access_key", "secret_key"],
+        },
+        "db": {
+            "properties": {
+                "host": {"type": "string"},
+                "port": {
+                    "type": "integer",
+                    "minimum": 1150,
+                    "maximum": 65535,
+                },  # port range found in the web creation wizard page
+                "dbname": {"type": "string"},
+                "user": {"type": "string"},
+                "password": {"type": "string"},
+            },
+            "additionalProperties": False,
+            "required": ["host", "port", "dbname", "user", "password"],
+        },
     },
     "required": [
-        "host",
-        "port",
-        "dbname",
-        "redshift_username",
-        "redshift_password",
-        "bucket",
-        "access_key",
-        "secret_key",
-    ],  # if another property is added, be sure to remember to add here too
+        "constants",
+        "s3",
+        "db",
+    ],
     "additionalProperties": False,
 }
-assert set(SCHEMA["properties"].keys()) == set(SCHEMA["required"]) | {
-    "default_schema"
-}  # forces them to match, except "default_schema"
+
+assert set(SCHEMA["properties"].keys()) == set(SCHEMA["required"])
+for property in SCHEMA["required"]:
+    base = SCHEMA["properties"][property]
+    assert set(base["properties"].keys()) == set(base["required"])
 
 
 def _get_serialized_store(file_path):
@@ -89,10 +106,13 @@ class Store:
             raise KeyError("That profile does not exist in the store")
 
     def __setitem__(self, key, profile):
+        raise KeyError("You're not allowed to directly set to the credential store")
+
+    def add(self, profile):
         jsonschema.validate(instance=profile, schema=SCHEMA)
-        self.profiles[key] = profile
+        self.profiles[profile["db"]["user"]] = profile
         if self.default is None:
-            self.default = key
+            self.default = profile["db"]["user"]
         self._save()
 
     def __delitem__(self, key):

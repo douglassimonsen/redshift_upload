@@ -15,17 +15,25 @@ import colorama
 import json
 
 
-params = [
-    "host",
-    "port",
-    "dbname",
-    "default_schema",
-    "redshift_username",
-    "redshift_password",
-    "bucket",
-    "access_key",
-    "secret_key",
-]
+param_sections = {
+    "s3": [
+        "access_key",
+        "secret_key",
+    ],
+    "db": [
+        "host",
+        "port",
+        "dbname",
+        "user",
+        "password",
+    ],
+    "constants": [
+        "default_schema",
+        "bucket",
+    ],
+}
+
+
 intro = """
 Let's get you uploading! The library needs these credentials to function.
 If you already have a default account set up in store.json, you can press
@@ -35,7 +43,11 @@ default_user = credential_store.credentials.default
 if default_user is not None:
     default_params = credential_store.credentials[default_user]
 else:
-    default_params = {"port": 5439, "default_schema": "public"}
+    default_params = {
+        "db": {"port": 5439},
+        "constants": {"default_schema": "public"},
+        "s3": {},
+    }
 s3_name = "library_test/" + "".join(
     random.choices([chr(65 + i) for i in range(26)], k=20)
 )  # needs to be out here so repeated s3 checks don't create orphan objects
@@ -54,12 +66,12 @@ def colorize(text, level="INFO"):
     return level_format[level] + text + colorama.Style.RESET_ALL
 
 
-def get_val(param):
+def get_val(param, section):
     question = f"What is the value for {param}"
     default_val = None
 
-    if param in default_params:
-        default_val = default_params[param]
+    if param in default_params[section]:
+        default_val = default_params[section][param]
         question += f" (default: {default_val})"
 
     question += ": "
@@ -85,8 +97,8 @@ def fix_schema(user):
         print(colorize("Schema successfully validated!", "SUCCESS"))
         return
     except jsonschema.exceptions.ValidationError as e:
-        print(colorize(f"{e.path[0]}: {e.message}", "WARNING"))
-        user[e.path[0]] = get_val(e.path[0])
+        print(colorize(f"{e.path[-1]}: {e.message}", "WARNING"))
+        user[e.path[0]][e.path[1]] = get_val(e.path[1], e.path[0])
         return fix_schema(user)
 
 
@@ -104,10 +116,10 @@ def test_s3(user):
     print(colorize("Testing S3 permissions"))
     s3 = boto3.resource(
         "s3",
-        aws_access_key_id=user["access_key"],
-        aws_secret_access_key=user["secret_key"],
+        aws_access_key_id=user["s3"]["access_key"],
+        aws_secret_access_key=user["s3"]["secret_key"],
     )
-    obj = s3.Object(user["bucket"], s3_name)
+    obj = s3.Object(user["constants"]["bucket"], s3_name)
     try:
         obj.put(Body=b"test")
     except botocore.exceptions.ClientError as e:
@@ -118,8 +130,8 @@ def test_s3(user):
                     "WARNING",
                 )
             )
-            user["access_key"] = get_val("access_key")
-            user["secret_key"] = get_val("secret_key")
+            user["s3"]["access_key"] = get_val("access_key", "s3")
+            user["s3"]["secret_key"] = get_val("secret_key", "s3")
             fix_schema(user)
             return test_s3(user)
         elif (
@@ -132,8 +144,8 @@ def test_s3(user):
                     "WARNING",
                 )
             )
-            user["access_key"] = get_val("access_key")
-            user["secret_key"] = get_val("secret_key")
+            user["s3"]["access_key"] = get_val("access_key", "s3")
+            user["s3"]["secret_key"] = get_val("secret_key", "s3")
             fix_schema(user)
             return test_s3(user)
         elif e.response["Error"]["Code"] == "NoSuchBucket":
@@ -142,7 +154,7 @@ def test_s3(user):
                     "It looks like that bucket doesn't exist. Try another?", "WARNING"
                 )
             )
-            user["bucket"] = get_val("bucket")
+            user["constants"]["bucket"] = get_val("bucket", "constants")
             fix_schema(user)
             return test_s3(user)
         else:
@@ -169,11 +181,7 @@ def test_redshift(user):
     print(colorize("Testing Redshift Permissions"))
     try:
         conn = psycopg2.connect(
-            host=user["host"],
-            dbname=user["dbname"],
-            port=user["port"],
-            user=user["redshift_username"],
-            password=user["redshift_password"],
+            **user["db"],
             connect_timeout=5,
         )
     except psycopg2.OperationalError as e:
@@ -184,7 +192,7 @@ def test_redshift(user):
                     "WARNING",
                 )
             )
-            user["dbname"] = get_val("dbname")
+            user["db"]["dbname"] = get_val("dbname", "db")
             fix_schema(user)
             return test_redshift(user)
         elif "Unknown host" in e.args[0]:
@@ -194,7 +202,7 @@ def test_redshift(user):
                     "WARNING",
                 )
             )
-            user["host"] = get_val("host")
+            user["db"]["host"] = get_val("host", "db")
             fix_schema(user)
             return test_redshift(user)
         elif "timeout expired" in e.args[0]:
@@ -204,22 +212,20 @@ def test_redshift(user):
                     "WARNING",
                 )
             )
-            user["port"] = get_val("port")
+            user["db"]["port"] = get_val("port", "db")
             fix_schema(user)
             return test_redshift(user)
         elif "password authentication failed" in e.args[0]:
             print(colorize("The credentials didn't work. Try others?", "WARNING"))
-            user["redshift_username"] = get_val("redshift_username")
-            user["redshift_password"] = get_val("redshift_password")
+            user["db"]["user"] = get_val("user", "db")
+            user["db"]["password"] = get_val("password", "db")
             fix_schema(user)
             return test_redshift(user)
         else:
             raise BaseException
 
     cursor = conn.cursor()
-    full_table_name = (
-        f"{user['dbname']}.{user.get('default_schema', 'public')}.{table_name}"
-    )
+    full_table_name = f"{user['db']['dbname']}.{user['constants'].get('default_schema', 'public')}.{table_name}"
     try:
         cursor.execute(
             f"create table {full_table_name} (test_col varchar(10), test_col2 int)"
@@ -231,7 +237,7 @@ def test_redshift(user):
                 "WARNING",
             )
         )
-        user["default_schema"] = get_val("default_schema")
+        user["constants"]["default_schema"] = get_val("default_schema", "constants")
         fix_schema(user)
         return test_redshift(user)
     except psycopg2.errors.InsufficientPrivilege:
@@ -241,7 +247,7 @@ def test_redshift(user):
                 "WARNING",
             )
         )
-        user["default_schema"] = get_val("default_schema")
+        user["constants"]["default_schema"] = get_val("default_schema", "constants")
         fix_schema(user)
         return test_redshift(user)
 
@@ -258,7 +264,7 @@ def test_connections(user):
 
 
 def test_vals(user):
-    do_tests = "y"  # yes_no("Do you want to verify these values are correct?")
+    do_tests = yes_no("Do you want to verify these values are correct?")
     if do_tests == "n":
         return
     fix_schema(user)
@@ -269,9 +275,10 @@ def test_vals(user):
 
 def main():
     print(intro)
-    user = {}
-    for param in params:
-        user[param] = get_val(param)
+    user = {"s3": {}, "db": {}, "constants": {}}
+    for section, params in param_sections.items():
+        for param in params:
+            user[section][param] = get_val(param, section)
     print(colorize("This is the data you've entered:"))
     print("\n" + json.dumps(user, indent=4) + "\n\n")
     test_vals(user)

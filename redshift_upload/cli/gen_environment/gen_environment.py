@@ -5,6 +5,7 @@ import click
 import os
 import sys
 import psycopg2
+import copy
 
 try:
     from ...credential_store import credential_store
@@ -88,38 +89,21 @@ def create_redshift_users(redshift_id):
     cluster_info = redshift.describe_clusters(ClusterIdentifier=redshift_id)[
         "Clusters"
     ][0]
+    constants = {
+        "default_schema": "public",
+    }
+    base = {
+        "host": cluster_info["Endpoint"]["Address"],
+        "port": cluster_info["Endpoint"]["Port"],
+        "dbname": cluster_info["DBName"],
+        "password": "Password1",
+    }
     ret = [
-        {
-            "host": cluster_info["Endpoint"]["Address"],
-            "port": cluster_info["Endpoint"]["Port"],
-            "dbname": cluster_info["DBName"],
-            "default_schema": "public",
-            "redshift_username": cluster_info["MasterUsername"],
-            "redshift_password": "Password1",
-        },
-        {
-            "host": cluster_info["Endpoint"]["Address"],
-            "port": cluster_info["Endpoint"]["Port"],
-            "dbname": cluster_info["DBName"],
-            "default_schema": "public",
-            "redshift_username": "analyst1",
-            "redshift_password": "Password1",
-        },
-        {
-            "host": cluster_info["Endpoint"]["Address"],
-            "port": cluster_info["Endpoint"]["Port"],
-            "dbname": cluster_info["DBName"],
-            "default_schema": "public",
-            "redshift_username": "analyst2",
-            "redshift_password": "Password1",
-        },
+        {**base, "user": user}
+        for user in [cluster_info["MasterUsername"], "analyst1", "analyst2"]
     ]
     with psycopg2.connect(
-        host=ret[0]["host"],
-        dbname=ret[0]["dbname"],
-        port=ret[0]["port"],
-        user=ret[0]["redshift_username"],
-        password=ret[0]["redshift_password"],
+        **ret[0],
         connect_timeout=5,
     ) as conn:
         cursor = conn.cursor()
@@ -162,13 +146,13 @@ def create_stack(stack):
 
     credential_store.set_store("test-library")
     credential_store.credentials.clear()
-    access_keys = get_access_keys(usernames[0])
-    for name, creds in zip(
-        ["admin", "analyst1", "analyst2"], create_redshift_users(redshift_id)
-    ):
-        creds["bucket"] = bucket
-        creds |= access_keys
-        credential_store.credentials[name] = creds
+
+    creds = {}
+    creds["s3"] = get_access_keys(usernames[0])
+    creds["constants"] = {"default_schema": "public", "bucket": bucket}
+    redshift_users = create_redshift_users(redshift_id)
+    for redshift in redshift_users:
+        credential_store.credentials.add({**creds, "db": redshift})
 
 
 def delete_stack(stack):
