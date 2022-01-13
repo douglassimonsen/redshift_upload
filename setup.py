@@ -4,7 +4,7 @@ import setuptools
 setuptools.setup(
     name="simple_redshift_upload",
     packages=["redshift_upload"],
-    version="1.1.0",
+    version="1.1.1",
     description="A package that simplifies uploading data to redshift",
     url="https://github.com/mwhamilton/redshift_upload",
     download_url="https://github.com/mwhamilton/redshift_upload/archive/1.0.0.tar.gz",
