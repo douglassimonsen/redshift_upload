@@ -21,10 +21,11 @@ SCHEMA = {
                     "type": "string",
                     "pattern": "(?=^.{3,63}$)(?!xn--)([a-z0-9](?:[a-z0-9-]*)[a-z0-9])$",
                 },  # https://stackoverflow.com/a/62673054/6465644
-                "default_schema": {"type": "string"},
+                "default_schema": {"type": ["string", "null"]},
+                "logging_endpoint": {"type": ["string", "null"]},
             },
             "additionalProperties": False,
-            "required": ["bucket", "default_schema"],
+            "required": ["bucket", "default_schema", "logging_endpoint"],
         },
         "s3": {
             "type": "object",

@@ -121,6 +121,8 @@ def upload(
     log.info(
         f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!"
     )
+    if aws_info["constants"]["logging_endpoint"]:
+        local_utilities.post_data(interface, aws_info["constants"]["logging_endpoint"])
     if upload_options["close_on_end"]:
         for conn in interface._db_conn.values():
             conn.close()

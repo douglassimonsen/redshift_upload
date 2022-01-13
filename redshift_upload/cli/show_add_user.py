@@ -30,6 +30,7 @@ param_sections = {
     "constants": [
         "default_schema",
         "bucket",
+        "logging_endpoint",
     ],
 }
 
@@ -80,6 +81,8 @@ def get_val(param, section):
         return default_val
     if param == "port":
         ret = int(ret)
+    if param == "logging_endpoint":
+        ret = ret or None
     return ret
 
 

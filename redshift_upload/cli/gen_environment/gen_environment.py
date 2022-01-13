@@ -89,9 +89,6 @@ def create_redshift_users(redshift_id):
     cluster_info = redshift.describe_clusters(ClusterIdentifier=redshift_id)[
         "Clusters"
     ][0]
-    constants = {
-        "default_schema": "public",
-    }
     base = {
         "host": cluster_info["Endpoint"]["Address"],
         "port": cluster_info["Endpoint"]["Port"],
@@ -149,7 +146,11 @@ def create_stack(stack):
 
     creds = {}
     creds["s3"] = get_access_keys(usernames[0])
-    creds["constants"] = {"default_schema": "public", "bucket": bucket}
+    creds["constants"] = {
+        "default_schema": "public",
+        "bucket": bucket,
+        "logging_endpoint": None,
+    }
     redshift_users = create_redshift_users(redshift_id)
     for redshift in redshift_users:
         credential_store.credentials.add({**creds, "db": redshift})
