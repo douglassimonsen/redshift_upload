@@ -3,23 +3,36 @@ import pytest  # noqa
 
 
 good_credentials = {
-    "redshift_username": "dummy",
-    "redshift_password": "dummy",
-    "access_key": "dummy",
-    "secret_key": "dummy",
-    "bucket": "dummy",
-    "host": "dummy",
-    "dbname": "dummy",
-    "port": "dummy",
+    "db": {
+        "user": "dummy",
+        "password": "dummy",
+        "host": "dummy",
+        "dbname": "dummy",
+        "port": "dummy",
+    },
+    "s3": {
+        "access_key": "dummy",
+        "secret_key": "dummy",
+    },
+    "constants": {
+        "bucket": "dummy",
+    },
 }
 bad_credentials = {
-    "redshift_password": "",
-    "access_key": "",
-    "secret_key": "",
-    "bucket": "",
-    "host": "",
-    "dbname": "",
-    "port": "",
+    "db": {
+        "user": "",
+        "password": "",
+        "host": "",
+        "dbname": "",
+        "port": "",
+    },
+    "s3": {
+        "access_key": "",
+        "secret_key": "",
+    },
+    "constants": {
+        "bucket": "",
+    },
 }
 good_upload_options = {}
 bad_upload_options = {

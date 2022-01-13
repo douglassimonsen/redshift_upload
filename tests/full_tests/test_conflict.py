@@ -73,7 +73,7 @@ def test_conflict():
 
 
 if __name__ == "__main__":
-    credential_store.set_store("library-test")
+    credential_store.set_store("test-library")
     testing_utilities.drop_tables(table_name)
     test_conflict()
     # testing_utilities.drop_tables(table_name)

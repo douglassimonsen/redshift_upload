@@ -28,7 +28,9 @@ def test_drop_table(schema):
         upload_options={"drop_table": True, "close_on_end": False},
     )
     interface.get_exclusive_lock()
-    with pytest.raises(psycopg2.errors.QueryCanceled):
+    with pytest.raises(
+        psycopg2.errors.QueryCanceled
+    ):  # this test can be flaky when run with all the rest. I think Redshift removes the lock when there's a lot of activity
         upload(
             source=df,  # needed for the comparison later
             schema_name=schema,
