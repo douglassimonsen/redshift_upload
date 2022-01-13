@@ -68,17 +68,11 @@ class Interface:
         Gets DB connection. Caches connection for later use
         """
         if user is None:
-            user = self.aws_info["redshift_username"]
+            user = self.aws_info["db"]["user"]
 
         if user not in self._db_conn:
             self._db_conn[user] = psycopg2.connect(
-                host=credential_store.credentials.profiles[user]["host"],
-                dbname=credential_store.credentials.profiles[user]["dbname"],
-                port=credential_store.credentials.profiles[user]["port"],
-                user=credential_store.credentials.profiles[user]["redshift_username"],
-                password=credential_store.credentials.profiles[user][
-                    "redshift_password"
-                ],
+                **credential_store.credentials.profiles[user]["db"]
             )
             cursor = self._db_conn[user].cursor()  # setting up defaults for the session
             cursor.execute(f"SET statement_timeout = {self.default_timeout}")
@@ -91,8 +85,8 @@ class Interface:
         if self._s3_conn is None:
             self._s3_conn = boto3.resource(
                 "s3",
-                aws_access_key_id=self.aws_info["access_key"],
-                aws_secret_access_key=self.aws_info["secret_key"],
+                aws_access_key_id=self.aws_info["s3"]["access_key"],
+                aws_secret_access_key=self.aws_info["s3"]["secret_key"],
                 use_ssl=False,
                 region_name="us-east-1",
             )
@@ -234,7 +228,9 @@ class Interface:
         def loader(data) -> None:
             i, source_df = data
             s3_name = self.s3_name + str(i)
-            obj = self.get_s3_conn().Object(self.aws_info["bucket"], s3_name)
+            obj = self.get_s3_conn().Object(
+                self.aws_info["constants"]["bucket"], s3_name
+            )
             obj.delete()
             obj.wait_until_not_exists()
 
@@ -268,7 +264,7 @@ class Interface:
         """
         for i in range(parallel_loads):
             obj = self.get_s3_conn().Object(
-                self.aws_info["bucket"], self.s3_name + str(i)
+                self.aws_info["constants"]["bucket"], self.s3_name + str(i)
             )
             try:
                 obj.delete()
@@ -300,7 +296,7 @@ class Interface:
         )
         try:
             processes = set(cursor.fetchall()) - {
-                (conn.get_backend_pid(), self.aws_info["redshift_username"])
+                (conn.get_backend_pid(), self.aws_info["db"]["user"])
             }  # we don't want to delete the connection we're on!
         except psycopg2.ProgrammingError:  # no results to fetch
             processes = set()
@@ -356,9 +352,9 @@ class Interface:
             columns = ""
         query = copy_table_query.format(
             file_destination=self.full_table_name,
-            source=f"s3://{self.aws_info['bucket']}/{self.s3_name}",
-            access=self.aws_info["access_key"],
-            secret=self.aws_info["secret_key"],
+            source=f"s3://{self.aws_info['constants']['bucket']}/{self.s3_name}",
+            access=self.aws_info["s3"]["access_key"],
+            secret=self.aws_info["s3"]["secret_key"],
             columns=columns,
         )
         cursor.execute(query)

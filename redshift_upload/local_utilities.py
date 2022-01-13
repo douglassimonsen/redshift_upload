@@ -333,18 +333,14 @@ def check_coherence(
     ):
         raise ValueError("You must only choose one. It doesn't make sense to do both")
 
-    for c in [
-        "redshift_username",
-        "redshift_password",
-        "access_key",
-        "secret_key",
-        "bucket",
-        "host",
-        "dbname",
-        "port",
-    ]:
-        if not aws_info.get(c):  # can't be null or empty strings
-            raise ValueError(f"You need to define {c} in the aws_info dictionary")
+    for section, params in {
+        "db": ["user", "password", "host", "dbname", "port"],
+        "s3": ["access_key", "secret_key"],
+        "constants": ["bucket"],  # default_schema can be not set
+    }.items():
+        for c in params:
+            if not aws_info.get(section, {}).get(c):  # can't be null or empty strings
+                raise ValueError(f"You need to define {c} in the aws_info dictionary")
 
     if upload_options["skip_checks"] and upload_options["drop_table"]:
         raise ValueError(

@@ -26,11 +26,7 @@ def setup_and_teardown():
 
 def get_conn(user):
     return psycopg2.connect(
-        host=user["host"],
-        dbname=user["dbname"],
-        port=user["port"],
-        user=user["redshift_username"],
-        password=user["redshift_password"],
+        **user["db"],
         connect_timeout=5,
     )
 
@@ -77,6 +73,7 @@ def test_conflict():
 
 
 if __name__ == "__main__":
+    credential_store.set_store("library-test")
     testing_utilities.drop_tables(table_name)
     test_conflict()
     # testing_utilities.drop_tables(table_name)
