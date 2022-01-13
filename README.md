@@ -226,7 +226,5 @@ This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit 
 
 ## Deploying a new verion to pypi
 1. Update the version in `redshift_upload/__init__.py`
-2. Run `python tagger.py`
-3. Run `git push`
-4. Run `git push --tags`
+2. Run `python push.py`
 5. Check [actions](https://github.com/douglassimonsen/redshift_upload/actions) for deployment progress
