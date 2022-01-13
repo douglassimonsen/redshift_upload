@@ -1,0 +1,1 @@
+include redshift_upload/db_interfaces/redshift_queries/*.sql
