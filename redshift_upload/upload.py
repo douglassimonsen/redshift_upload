@@ -25,7 +25,7 @@ def upload(
     schema_name: str = None,
     table_name: str = None,
     upload_options: Dict = None,
-    aws_info: Dict | str | None = None,
+    user: str | None = None,
     log_level: str = "INFO",
     interface: redshift.Interface = None,
 ) -> redshift.Interface:
@@ -37,14 +37,23 @@ def upload(
     source_kwargs = source_kwargs or {}
     column_types = column_types or {}
 
-    if isinstance(aws_info, str):
-        log.info(f"Using the stored credentials for user: {aws_info}")
-        aws_info = credential_store.credentials[aws_info]
-    elif aws_info is None:
+    if user is None:
         log.info(
             "Since nothing was passed to parameter 'aws_info', using the default credentials"
         )
         aws_info = credential_store.credentials()
+    elif isinstance(user, str):
+        log.info(f"Using the stored credentials for user: {user}")
+        aws_info = credential_store.credentials[user]
+    elif isinstance(user, dict):
+        log.info(f"Adding {user['db']['user']} to the credential store")
+        credential_store.credentials.add(user)
+        aws_info = credential_store.credentials[user["db"]["user"]]
+    else:
+        raise ValueError(
+            "The user must either be a user in the credential store or a dictionary of credentials"
+        )
+
     if schema_name is None:
         schema_name = aws_info["constants"].get("default_schema")
 
