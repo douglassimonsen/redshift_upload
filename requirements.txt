@@ -5,9 +5,9 @@ psycopg2
 toposort
 fuzzywuzzy
 colorama
-
-[credential-manager]
 jsonschema
 
 [build]
 pre-commit
+twine
+

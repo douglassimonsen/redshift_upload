@@ -220,4 +220,11 @@ The redshift users must have access to the following system tables:
 2. STV_LOCKS
 # Contributing
 
+## Setup environment
 This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit hook to ensure consistent styling. To enable this, run `pre-commit install` in the directory.
+
+
+## Deploying a new verion to pypi
+1. Update the version in `redshift_upload/__init__.py`
+2. Update the version in `setup.py`
+3. Run `python setup.py sdist`

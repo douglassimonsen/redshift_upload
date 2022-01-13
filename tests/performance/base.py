@@ -21,13 +21,7 @@ POWERS_CHECKED = 8
 
 
 def get_conn():
-    return psycopg2.connect(
-        host=aws_creds["host"],
-        dbname=aws_creds["dbname"],
-        port=aws_creds["port"],
-        user=aws_creds["redshift_username"],
-        password=aws_creds["redshift_password"],
-    )
+    return psycopg2.connect(**aws_creds["db"])
 
 
 def library(data, table_name):
