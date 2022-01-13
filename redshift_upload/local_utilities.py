@@ -8,6 +8,9 @@ import math
 import itertools
 import collections
 import colorama
+import requests
+import datetime
+import getpass
 
 try:
     import constants, column_type_utilities  # type: ignore
@@ -353,3 +356,21 @@ def check_coherence(
                 f'{c} must be an int. Currently it is set to "{upload_options[c]}" (type: {type(upload_options[c]).__name__})'
             )
     return upload_options, aws_info
+
+
+def post_data(url, interface, load_duration, source):
+    resp = requests.post(
+        url,
+        json={
+            "db_name": interface.aws_info["db"]["dbname"],
+            "schema_name": interface.schema_name,
+            "table_name": interface.table_name,
+            "load_duration": load_duration,
+            "completed_dt": datetime.datetime.utcnow().strftime(
+                "%Y-%m-%dT%H:%M:%S.%fZ"
+            ),
+            "rows": source.num_rows,
+            "redshift_user": interface.aws_info["db"]["user"],
+            "os_user": getpass.getuser(),
+        },
+    )

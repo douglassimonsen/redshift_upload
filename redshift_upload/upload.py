@@ -118,11 +118,15 @@ def upload(
         redshift_utilities.record_upload(interface, source)
     if upload_options["cleanup_s3"] and source.num_rows > 0:
         interface.cleanup_s3(load_in_parallel)
+
+    load_duration = round(time.time() - start_time, 2)
     log.info(
-        f"Upload to {schema_name}.{table_name} finished in {round(time.time() - start_time, 2)} seconds!"
+        f"Upload to {schema_name}.{table_name} finished in {load_duration} seconds!"
     )
     if aws_info["constants"]["logging_endpoint"]:
-        local_utilities.post_data(interface, aws_info["constants"]["logging_endpoint"])
+        local_utilities.post_data(
+            aws_info["constants"]["logging_endpoint"], interface, load_duration, source
+        )
     if upload_options["close_on_end"]:
         for conn in interface._db_conn.values():
             conn.close()
