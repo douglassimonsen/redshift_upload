@@ -229,3 +229,5 @@ This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit 
 2. Update the version in `setup.py`
 3. Run `python setup.py sdist`
 4. Run `git tag v<version>`
+5. Go to github page and create a new release
+6. The github action begins to run!

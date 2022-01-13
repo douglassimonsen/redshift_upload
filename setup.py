@@ -1,12 +1,15 @@
 import setuptools
+import sys, os
 
-# print(setuptools.find_packages())
-# exit()
+this_directory = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
+sys.path.insert(0, this_directory)
+from redshift_upload import __version__
+
 
 setuptools.setup(
     name="simple_redshift_upload",
     packages=setuptools.find_packages(),
-    version="1.1.2",
+    version=__version__,
     description="A package that simplifies uploading data to redshift",
     url="https://github.com/mwhamilton/redshift_upload",
     download_url="https://github.com/mwhamilton/redshift_upload/archive/1.0.0.tar.gz",
