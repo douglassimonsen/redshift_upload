@@ -12,7 +12,7 @@ setuptools.setup(
     version=__version__,
     description="A package that simplifies uploading data to redshift",
     url="https://github.com/mwhamilton/redshift_upload",
-    download_url="https://github.com/mwhamilton/redshift_upload/archive/1.0.0.tar.gz",
+    download_url=f"https://github.com/mwhamilton/redshift_upload/archive/{__version__}.tar.gz",
     author="Matthew Hamilton",
     author_email="mwhamilton6@gmail.com",
     license="MIT",
