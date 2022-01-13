@@ -13,3 +13,5 @@ if possible_tag not in repo.tags:
     tag = repo.create_tag(
         possible_tag, message=f"Automatic Tag for release: {possible_tag}"
     )
+    repo.remotes.origin.push(tag)
+repo.remotes.origin.push()
