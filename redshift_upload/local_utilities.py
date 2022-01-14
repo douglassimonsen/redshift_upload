@@ -59,19 +59,19 @@ class Source:
 
 
 class CustomFormatter(logging.Formatter):
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)"
-
+    FORMAT_STR = "%(asctime)s - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)"
     FORMATS = {
-        logging.DEBUG: colorama.Fore.BLUE + format + reset,
-        logging.INFO: colorama.Fore.GREEN + format + reset,
-        logging.WARNING: colorama.Fore.YELLOW + format + reset,
-        logging.ERROR: colorama.Fore.RED + format + reset,
-        logging.CRITICAL: colorama.Fore.RED + format + reset,
+        logging.DEBUG: colorama.Fore.BLUE,
+        logging.INFO: colorama.Fore.GREEN,
+        logging.WARNING: colorama.Fore.YELLOW,
+        logging.ERROR: colorama.Fore.RED,
+        logging.CRITICAL: colorama.Fore.RED,
     }
 
     def format(self, record: logging.LogRecord) -> str:
-        log_fmt = self.FORMATS.get(record.levelno)
+        log_fmt = (
+            self.FORMATS[record.levelno] + self.FORMAT_STR + colorama.Style.RESET_ALL
+        )
         formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
 
