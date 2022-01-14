@@ -106,7 +106,7 @@ class Interface:
             "NUMERIC": "DECIMAL",
             "FLOAT4": "REAL",
             "BOOL": "BOOLEAN",
-            "CHARACTER VARYING": "VARCHAR",  # this must come before CHARACTER, otherwise the process returns wrong
+            "CHARACTER VARYING": "VARCHAR",  # this must come before CHARACTER, otherwise the process returns wrong, since CHARACTER is a substring
             "NVARCHAR": "VARCHAR",
             "TEXT": "VARCHAR",
             "CHARACTER": "CHAR",
@@ -123,11 +123,11 @@ class Interface:
             alias = alias.upper()
             if alias in alias_mapping.values():
                 return alias
-            for k, v in alias_mapping.items():
-                if k in alias:
+            for full_name, common_name in alias_mapping.items():
+                if full_name in alias:
                     return alias.replace(
-                        k, v
-                    )  # without this, INT2 -> SMALLINT -> SMALLINTEGER (since the INT gets captured)
+                        full_name, common_name
+                    )  # without returning, INT2 -> SMALLINT -> INTEGER (since the INT gets captured)
             return alias
 
         query = """
@@ -147,7 +147,10 @@ class Interface:
         """
 
         def get_view_query(row: Dict) -> Dict:
-            view_text_query = f"set search_path = 'public';\nselect pg_get_viewdef('{row['full_name']}', true) as text"
+            view_text_query = f"""
+            set search_path = 'public';
+            select pg_get_viewdef('{row['full_name']}', true) as text
+            """
 
             with self.get_db_conn().cursor() as cursor:
                 cursor.execute(view_text_query)
@@ -181,7 +184,7 @@ class Interface:
                     grants.append(
                         f'GRANT {action} on {schema_name}.{view_name} to {", ".join(users)}'
                     )
-                return "\n\n".join(grants)
+                return "\n\n".join(grants)  # the \n\n is just to be more
 
         def format_row(row: List) -> Dict:
             return {
@@ -307,7 +310,7 @@ class Interface:
             }  # we don't want to delete the connection we're on!
         except psycopg2.ProgrammingError:  # no results to fetch
             processes = set()
-        for process, username in processes:
+        for process, _ in processes:
             try:
                 cursor.execute(f"select pg_terminate_backend('{process}')")
             except:  # noqa

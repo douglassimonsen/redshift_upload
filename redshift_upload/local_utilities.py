@@ -59,10 +59,6 @@ class Source:
 
 
 class CustomFormatter(logging.Formatter):
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     format = "%(asctime)s - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)"
 
@@ -232,7 +228,7 @@ def fix_column_types(
     def clean_column(col: str, i: int, cols: List):
         col_count = cols[:i].count(col)
         if col_count != 0:
-            col = f"{col}{col_count}"
+            col = f"{col}{col_count + 1}"
         return col.replace(".", "_")[
             : constants.MAX_COLUMN_LENGTH
         ]  # yes, this could cause a collision, but probs not
@@ -291,7 +287,7 @@ def fix_column_types(
             and interface.table_exists
             and not drop_table
             and colname in source.predefined_columns
-        ):
+        ):  # these conditions mean we have data that will be too large for the data
             if col_info["suffix"] > source.predefined_columns[colname]["suffix"]:
                 if not interface.expand_varchar_column(colname, col_info["suffix"]):
                     log.error(

@@ -63,7 +63,7 @@ s3_name = "library_test/" + "".join(
 )  # needs to be out here so repeated s3 checks don't create orphan objects
 table_name = "library_test_" + "".join(
     random.choices([chr(65 + i) for i in range(26)], k=20)
-)  # needs to be out here so repeated redshift checks don't create orphan objects
+)  # needs to be out here so repeated redshift checks don't create orphan tables
 
 
 def colorize(text, level="INFO"):
@@ -76,7 +76,7 @@ def colorize(text, level="INFO"):
     return level_format[level] + text + colorama.Style.RESET_ALL
 
 
-def get_val(param, section):
+def get_val(section, param):
     question = f"What is the value for {param}"
     default_val = None
 
@@ -88,13 +88,13 @@ def get_val(param, section):
     ret = input(colorize(question))
     if len(ret) == 0 and default_val is not None:
         return default_val
-    if param == "port":
-        ret = int(ret)
-    if param in ("logging_endpoint", "logging_endpoint_type"):
-        ret = ret or None
-    if param == "get_table_lock":
-        ret = ret.lower()[0] == "t"  # true, t are converted to True
-    return ret
+    formatting_options = {
+        "port": lambda x: int(x),
+        "logging_endpoint": lambda x: x or None,
+        "logging_endpoint_type": lambda x: x or None,
+        "get_table_lock": lambda x: (x.lower()[0] == "t"),
+    }
+    return formatting_options.get(param, lambda x: x)(ret)
 
 
 def yes_no(question):
@@ -112,7 +112,7 @@ def fix_schema(user):
         return
     except jsonschema.exceptions.ValidationError as e:
         print(colorize(f"{e.path[-1]}: {e.message}", "WARNING"))
-        user[e.path[0]][e.path[1]] = get_val(e.path[1], e.path[0])
+        user[e.path[0]][e.path[1]] = get_val(e.path[0], e.path[1])
         return fix_schema(user)
 
 
@@ -121,6 +121,14 @@ def unhandled_aws_error(error):
     print(error)
     print(error.response)
     raise ValueError
+
+
+def test_failed(error_msg, bad_params, user, test_func):
+    print(colorize(error_msg, "WARNING"))
+    for param in bad_params:
+        user[param[0]][param[1]] = get_val(param[0], param[1])
+        fix_schema(user)
+        return test_func(user)
 
 
 def test_s3(user):
@@ -138,39 +146,29 @@ def test_s3(user):
         obj.put(Body=b"test")
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "InvalidAccessKeyId":
-            print(
-                colorize(
-                    "It looks like the access key doesn't exist. Try another?",
-                    "WARNING",
-                )
+            return test_failed(
+                "It looks like the access key doesn't exist. Try another?",
+                [["s3", "access_key"], ["s3", "secret_key"]],
+                user,
+                test_s3,
             )
-            user["s3"]["access_key"] = get_val("access_key", "s3")
-            user["s3"]["secret_key"] = get_val("secret_key", "s3")
-            fix_schema(user)
-            return test_s3(user)
         elif (
             e.response["Error"]["Code"] == "AccessDenied"
             and e.operation_name == "PutObject"
         ):
-            print(
-                colorize(
-                    "It looks like the access key doesn't have permission to write to the specified bucket. Try new access keys or bucket",
-                    "WARNING",
-                )
+            return test_failed(
+                "It looks like the access key doesn't have permission to write to the specified bucket. Try new access keys or bucket",
+                [["s3", "access_key"], ["s3", "secret_key"], ["constants", "bucket"]],
+                user,
+                test_s3,
             )
-            user["s3"]["access_key"] = get_val("access_key", "s3")
-            user["s3"]["secret_key"] = get_val("secret_key", "s3")
-            fix_schema(user)
-            return test_s3(user)
         elif e.response["Error"]["Code"] == "NoSuchBucket":
-            print(
-                colorize(
-                    "It looks like that bucket doesn't exist. Try another?", "WARNING"
-                )
+            return test_failed(
+                "It looks like that bucket doesn't exist. Try another?",
+                [["constants", "bucket"]],
+                user,
+                test_s3,
             )
-            user["constants"]["bucket"] = get_val("bucket", "constants")
-            fix_schema(user)
-            return test_s3(user)
         else:
             unhandled_aws_error(e)
 
@@ -206,7 +204,7 @@ def test_redshift(user):
                     "WARNING",
                 )
             )
-            user["db"]["dbname"] = get_val("dbname", "db")
+            user["db"]["dbname"] = get_val("db", "dbname")
             fix_schema(user)
             return test_redshift(user)
         elif "Unknown host" in e.args[0]:
@@ -216,25 +214,23 @@ def test_redshift(user):
                     "WARNING",
                 )
             )
-            user["db"]["host"] = get_val("host", "db")
+            user["db"]["host"] = get_val("db", "host")
             fix_schema(user)
             return test_redshift(user)
         elif "timeout expired" in e.args[0]:
-            print(
-                colorize(
-                    "The connection timed out. This normally happens when the port is wrong. Try entering another?",
-                    "WARNING",
-                )
+            return test_failed(
+                "The connection timed out. This normally happens when the port is wrong. Try entering another?",
+                [["db", "port"]],
+                user,
+                test_redshift,
             )
-            user["db"]["port"] = get_val("port", "db")
-            fix_schema(user)
-            return test_redshift(user)
         elif "password authentication failed" in e.args[0]:
-            print(colorize("The credentials didn't work. Try others?", "WARNING"))
-            user["db"]["user"] = get_val("user", "db")
-            user["db"]["password"] = get_val("password", "db")
-            fix_schema(user)
-            return test_redshift(user)
+            return test_failed(
+                "The credentials failed authentication. Try others?",
+                [["db", "user"], ["db", "password"]],
+                user,
+                test_redshift,
+            )
         else:
             raise BaseException
 
@@ -245,25 +241,19 @@ def test_redshift(user):
             f"create table {full_table_name} (test_col varchar(10), test_col2 int)"
         )
     except psycopg2.errors.InvalidSchemaName:
-        print(
-            colorize(
-                "It looks like that schema doesn't exist. Want to specify another?",
-                "WARNING",
-            )
+        return test_failed(
+            "It looks like that schema doesn't exist. Want to specify another?",
+            [["constants", "default_schema"]],
+            user,
+            test_redshift,
         )
-        user["constants"]["default_schema"] = get_val("default_schema", "constants")
-        fix_schema(user)
-        return test_redshift(user)
     except psycopg2.errors.InsufficientPrivilege:
-        print(
-            colorize(
-                "It looks like you don't have permissions to create tables in this schema. Try another?",
-                "WARNING",
-            )
+        return test_failed(
+            "It looks like you don't have permissions to create tables in this schema. Try another?",
+            [["constants", "default_schema"]],
+            user,
+            test_redshift,
         )
-        user["constants"]["default_schema"] = get_val("default_schema", "constants")
-        fix_schema(user)
-        return test_redshift(user)
 
     cursor.execute(f"insert into {full_table_name} values ('hi', 2)")
     cursor.execute(f"drop table {full_table_name}")
@@ -292,7 +282,7 @@ def main():
     user = {"s3": {}, "db": {}, "constants": {}}
     for section, params in param_sections.items():
         for param in params:
-            user[section][param] = get_val(param, section)
+            user[section][param] = get_val(section, param)
     print(colorize("This is the data you've entered:"))
     print("\n" + json.dumps(user, indent=4) + "\n\n")
     test_vals(user)
