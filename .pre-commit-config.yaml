@@ -7,3 +7,13 @@ repos:
       rev: v2.5.0
       hooks:
         - id: check-added-large-files
+    - repo: local
+      hooks:
+        - id: tag stuff
+          name: tag stuff
+          always_run: true
+          stages: [post-commit]
+          entry: 'python'
+          args: ['tagger.py']
+          language: system
+          types: ['python']

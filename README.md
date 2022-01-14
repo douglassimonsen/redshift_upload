@@ -221,7 +221,7 @@ The redshift users must have access to the following system tables:
 # Contributing
 
 ## Setup environment
-This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit hook to ensure consistent styling. To enable this, run `pre-commit install` in the directory.
+This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit hook to ensure consistent styling. To enable this, run `pre-commit install --hook-type pre-commit --hook-type post-commit` in the directory.
 
 
 ## Deploying a new verion to pypi
