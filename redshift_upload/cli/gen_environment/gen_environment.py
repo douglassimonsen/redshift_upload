@@ -150,6 +150,7 @@ def create_stack(stack):
         "default_schema": "public",
         "bucket": bucket,
         "logging_endpoint": None,
+        "logging_endpoint_type": None,
     }
     redshift_users = create_redshift_users(redshift_id)
     for redshift in redshift_users:

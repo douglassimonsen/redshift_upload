@@ -114,8 +114,6 @@ def upload(
         redshift_utilities.reinstantiate_views(
             interface, upload_options["drop_table"], upload_options["grant_access"]
         )
-    if interface.aws_info.get("records_table") is not None:
-        redshift_utilities.record_upload(interface, source)
     if upload_options["cleanup_s3"] and source.num_rows > 0:
         interface.cleanup_s3(load_in_parallel)
 
@@ -125,7 +123,11 @@ def upload(
     )
     if aws_info["constants"]["logging_endpoint"]:
         local_utilities.post_data(
-            aws_info["constants"]["logging_endpoint"], interface, load_duration, source
+            aws_info["constants"]["logging_endpoint"],
+            aws_info["constants"]["logging_endpoint_type"],
+            interface,
+            load_duration,
+            source,
         )
     if upload_options["close_on_end"]:
         for conn in interface._db_conn.values():

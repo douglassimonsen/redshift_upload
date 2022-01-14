@@ -243,29 +243,3 @@ def reinstantiate_views(
                 log.warning(
                     f"You can see the view body at {os.path.abspath(os.path.join(base_path, view['view_name']))}"
                 )
-
-
-def record_upload(
-    interface: redshift.Interface, source: local_utilities.Source
-) -> None:
-    """
-    Records basic information about the upload session to a table.
-    Happens at the end so a failure here won't impact the overall upload.
-    """
-    query = f"""
-    insert into {interface.aws_info['records_table']}
-           (  table_name,     upload_time,     rows,     redshift_user,     os_user)
-    values (%(table_name)s, %(upload_time)s, %(rows)s, %(redshift_user)s, %(os_user)s)
-    """
-    data = {
-        "table_name": interface.full_table_name,
-        "upload_time": datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
-        "rows": source.shape[0],
-        "redshift_user": interface.aws_info["redshift_username"],
-        "os_user": getpass.getuser(),  # I recognize it's not great, but hopefully no one running this is malicious. https://stackoverflow.com/a/842096/6465644
-    }
-    log.info("Recording Redshift Upload")
-    conn = interface.get_db_conn()
-    cursor = conn.cursor()
-    cursor.execute(query, data)
-    conn.commit()

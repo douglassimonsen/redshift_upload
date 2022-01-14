@@ -31,6 +31,7 @@ param_sections = {
         "default_schema",
         "bucket",
         "logging_endpoint",
+        "logging_endpoint_type",
     ],
 }
 
@@ -46,7 +47,7 @@ if default_user is not None:
 else:
     default_params = {
         "db": {"port": 5439},
-        "constants": {"default_schema": "public"},
+        "constants": {"default_schema": "public", "logging_endpoint_type": "db"},
         "s3": {},
     }
 s3_name = "library_test/" + "".join(
@@ -81,7 +82,7 @@ def get_val(param, section):
         return default_val
     if param == "port":
         ret = int(ret)
-    if param == "logging_endpoint":
+    if param in ("logging_endpoint", "logging_endpoint_type"):
         ret = ret or None
     return ret
 

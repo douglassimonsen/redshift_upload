@@ -358,19 +358,36 @@ def check_coherence(
     return upload_options, aws_info
 
 
-def post_data(url, interface, load_duration, source):
-    resp = requests.post(
-        url,
-        json={
-            "db_name": interface.aws_info["db"]["dbname"],
-            "schema_name": interface.schema_name,
-            "table_name": interface.table_name,
-            "load_duration": load_duration,
-            "completed_dt": datetime.datetime.utcnow().strftime(
-                "%Y-%m-%dT%H:%M:%S.%fZ"
-            ),
-            "rows": source.num_rows,
-            "redshift_user": interface.aws_info["db"]["user"],
-            "os_user": getpass.getuser(),
-        },
-    )
+def post_data(
+    endpoint: str,
+    endpoint_type: str,
+    interface: redshift.Interface,
+    load_duration: float,
+    source: Source,
+) -> None:
+    """
+    Records basic information about the upload session to a table.
+    Happens at the end so a failure here won't impact the overall upload.
+    """
+    log.info("Recording Redshift Upload")
+    data = {
+        "db_name": interface.aws_info["db"]["dbname"],
+        "schema_name": interface.schema_name,
+        "table_name": interface.table_name,
+        "load_duration": load_duration,
+        "completed_dt": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "rows": source.num_rows,
+        "redshift_user": interface.aws_info["db"]["user"],
+        "os_user": getpass.getuser(),
+    }
+    query = f"""
+    insert into {endpoint} ({", ".join(data.keys())}) 
+    values ({", ".join(f"%({x})s" for x in data.keys())})
+    """
+    if endpoint_type == "api":
+        requests.post(endpoint, json=data)
+    elif endpoint_type == "db":
+        conn = interface.get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute(query, data)
+        conn.commit()

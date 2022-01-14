@@ -23,9 +23,18 @@ SCHEMA = {
                 },  # https://stackoverflow.com/a/62673054/6465644
                 "default_schema": {"type": ["string", "null"]},
                 "logging_endpoint": {"type": ["string", "null"]},
+                "logging_endpoint_type": {
+                    "type": ["string", "null"],
+                    "enum": ["db", "api", None],
+                },
             },
             "additionalProperties": False,
-            "required": ["bucket", "default_schema", "logging_endpoint"],
+            "required": [
+                "bucket",
+                "default_schema",
+                "logging_endpoint",
+                "logging_endpoint_type",
+            ],
         },
         "s3": {
             "type": "object",
