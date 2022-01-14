@@ -1,5 +1,6 @@
 import setuptools
 import sys, os
+from pathlib import Path
 
 this_directory = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 sys.path.insert(0, this_directory)
@@ -33,4 +34,6 @@ setuptools.setup(
         "pytest",
         "toposort",
     ],
+    long_description=(Path(__file__).parent / "README.md").read_text(),
+    long_description_content_type="text/markdown",
 )
