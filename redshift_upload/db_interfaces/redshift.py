@@ -8,7 +8,7 @@ import multiprocessing.pool
 from typing import Dict, List, Tuple
 
 if __name__ == "__main__":
-    import sys, os
+    import sys
     from pathlib import Path
 
     sys.path.insert(0, Path(__file__).parents[1])
@@ -310,7 +310,7 @@ class Interface:
         for process, username in processes:
             try:
                 cursor.execute(f"select pg_terminate_backend('{process}')")
-            except:
+            except:  # noqa
                 pass
         conn.commit()
         try:

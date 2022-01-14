@@ -1,5 +1,5 @@
 import pytest
-import sys, pathlib
+import sys, pathlib  # noqa
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1]))
 from redshift_upload import credential_store

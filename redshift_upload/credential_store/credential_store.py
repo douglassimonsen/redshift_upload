@@ -4,7 +4,7 @@ import jsonschema
 
 try:
     from .. import base_utilities
-except:
+except ImportError:
     import sys
     from pathlib import Path
 

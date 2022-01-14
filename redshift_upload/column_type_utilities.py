@@ -11,7 +11,7 @@ def date_func(x: str, type_info: Dict):
         datetime.datetime.strptime(x, "%Y-%m-%d")
         # TODO implement min/max valid range
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -24,7 +24,7 @@ def timestamptz_func(x: str, type_info: Dict):
         try:
             datetime.datetime.strptime(x, fmt)
             return True
-        except:
+        except:  # noqa
             pass
     return False
 
@@ -38,7 +38,7 @@ def timestamp_func(x: str, type_info: Dict):
         try:
             datetime.datetime.strptime(x, fmt)
             return True
-        except:
+        except:  # noqa
             pass
     return False
 
@@ -52,7 +52,7 @@ def smallint_func(x: str, type_info: Dict):
         y = int(x)
         assert -32768 <= y <= 32767
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -65,7 +65,7 @@ def int_func(x: str, type_info: Dict):
         y = int(x)
         assert -2147483648 <= y <= +2147483647
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -80,7 +80,7 @@ def bigint_func(x: str, type_info: Dict):
         y = int(x)
         assert -9223372036854775808 <= y <= 9223372036854775807
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -91,7 +91,7 @@ def double_precision_func(x: str, type_info: Dict):
     try:
         float(x)
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -117,7 +117,7 @@ def timetz_func(x: str, type_info: Dict):
     try:
         datetime.datetime.strptime(x, "%H:%M:%S%z")
         return True
-    except:
+    except:  # noqa
         return False
 
 
@@ -128,7 +128,7 @@ def time_func(x: str, type_info: Dict):
     try:
         datetime.datetime.strptime(x, "%H:%M:%S")
         return True
-    except:
+    except:  # noqa
         return False
 
 

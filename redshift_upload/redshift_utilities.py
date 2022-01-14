@@ -4,7 +4,6 @@ import toposort  # type: ignore
 import datetime
 import psycopg2  # type: ignore
 import psycopg2.sql  # type: ignore
-import getpass
 from typing import Dict, List, Union
 
 try:

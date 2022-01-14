@@ -2,9 +2,9 @@ import psycopg2
 import logging
 
 try:
-    from . import credential_store
-except:
-    import credential_store
+    from .credential_store import credential_store
+except ImportError:
+    from credential_store import credential_store
 log = logging.getLogger("redshift_utilities-test")
 
 credential_store.set_store("test-library")

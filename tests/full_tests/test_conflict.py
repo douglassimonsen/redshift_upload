@@ -1,7 +1,7 @@
 try:
     from redshift_upload import upload, credential_store, testing_utilities  # noqa
 except ModuleNotFoundError:
-    import sys, os
+    import sys
     from pathlib import Path
 
     sys.path.insert(0, Path(__file__).parents[2])
@@ -55,11 +55,11 @@ def test_conflict():
             select pg_views.viewowner
             from pg_class
 
-            left join pg_namespace 
+            left join pg_namespace
             on pg_namespace.oid = pg_class.relnamespace
 
-            left JOIN pg_views 
-            on pg_views.schemaname = pg_namespace.nspname 
+            left JOIN pg_views
+            on pg_views.schemaname = pg_namespace.nspname
             and pg_views.viewname = pg_class.relname
             where relname = 'unit_test_conflict_view'
             """

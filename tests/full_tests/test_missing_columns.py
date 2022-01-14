@@ -1,4 +1,3 @@
-import pathlib
 import pytest
 from redshift_upload import upload, testing_utilities  # noqa
 import datetime  # noqa

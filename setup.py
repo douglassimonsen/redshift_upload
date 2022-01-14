@@ -1,5 +1,5 @@
 import setuptools
-import sys, os
+import sys
 from pathlib import Path
 
 this_directory = Path(__file__).parent.replace("\\", "/")

@@ -119,7 +119,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     )  # cannot have more groups than rows, otherwise it breaks
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [
-        chunk_to_string(rows[offset : (offset + chunk_size)])
+        chunk_to_string(rows[offset : (offset + chunk_size)])  # noqa
         for offset in range(0, source.num_rows, chunk_size)
     ], load_in_parallel
 
@@ -383,7 +383,7 @@ def post_data(
         "os_user": getpass.getuser(),
     }
     query = f"""
-    insert into {endpoint} ({", ".join(data.keys())}) 
+    insert into {endpoint} ({", ".join(data.keys())})
     values ({", ".join(f"%({x})s" for x in data.keys())})
     """
     if endpoint_type == "api":

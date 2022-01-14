@@ -1,7 +1,7 @@
 try:
     from ..credential_store import credential_store
 except ImportError:
-    import os, sys
+    import sys
     from pathlib import Path
 
     sys.path.insert(0, Path(__file__).parents[1])
