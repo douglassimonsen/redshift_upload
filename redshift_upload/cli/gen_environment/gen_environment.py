@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import sys
 import psycopg2
-
+from typing import List, Dict, Tuple
 
 try:
     from ...credential_store import credential_store
@@ -23,7 +23,7 @@ iam = boto3.client("iam")
 s3 = boto3.resource("s3")
 
 
-def check_stack_status(stack_name):
+def check_stack_status(stack_name: str) -> str:
     stacks = cloudformation.list_stacks(
         StackStatusFilter=[
             "CREATE_IN_PROGRESS",
@@ -55,7 +55,7 @@ def check_stack_status(stack_name):
             return stack["StackStatus"]
 
 
-def build_stack(stack):
+def build_stack(stack: str) -> None:
     if check_stack_status(stack) is not None:
         logging.error("Stack already exists")
         raise ValueError("Stack already exists")
@@ -81,7 +81,7 @@ def build_stack(stack):
     )
 
 
-def create_redshift_users(redshift_id):
+def create_redshift_users(redshift_id: str) -> List[Dict]:
     cluster_info = redshift.describe_clusters(ClusterIdentifier=redshift_id)[
         "Clusters"
     ][0]
@@ -109,7 +109,7 @@ def create_redshift_users(redshift_id):
     return ret
 
 
-def get_stack_resources(stack):
+def get_stack_resources(stack: str) -> Tuple[str, str, List[Dict]]:
     resources = cloudformation.list_stack_resources(StackName=stack)[
         "StackResourceSummaries"
     ]
@@ -128,12 +128,12 @@ def get_stack_resources(stack):
     return redshift_id, bucket, usernames
 
 
-def get_access_keys(username):
+def get_access_keys(username: str) -> Dict[str, str]:
     creds = iam.create_access_key(UserName=username)["AccessKey"]
     return {"access_key": creds["AccessKeyId"], "secret_key": creds["SecretAccessKey"]}
 
 
-def create_stack(stack):
+def create_stack(stack: str) -> None:
     build_stack(stack)
     redshift_id, bucket, usernames = get_stack_resources(stack)
 
@@ -154,7 +154,7 @@ def create_stack(stack):
         credential_store.credentials.add({**creds, "db": redshift})
 
 
-def delete_stack(stack):
+def delete_stack(stack: str) -> None:
     _, bucket, _ = get_stack_resources(stack)
     for obj in s3.Bucket(bucket).objects.filter():
         s3.Object(bucket, obj.key).delete()
@@ -174,7 +174,7 @@ def delete_stack(stack):
     help="If this flag is set, the stack will be removed. Otherwise the stack will be created",
 )
 @click.option("--logging-level", default="ERROR", type=str)
-def gen_environment(stack_name, destroy, logging_level):
+def gen_environment(stack_name: str, destroy: bool, logging_level: str) -> None:
     "Sets up a basic Redshift environment for testing"
     logging.basicConfig(
         format="[%(name)s, %(levelname)s] %(asctime)s: %(message)s",

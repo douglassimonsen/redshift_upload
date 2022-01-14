@@ -22,7 +22,7 @@ def log_dependent_views(interface: redshift.Interface) -> None:
     Gets dependent views and saves them locally for reinstantiation after table is regenerated.
     """
 
-    def log_query(metadata: Dict):
+    def log_query(metadata: Dict) -> None:
         metadata[
             "text"
         ] = f"set search_path = '{interface.schema_name}';\nCREATE {metadata.get('view_type', 'view')} {metadata['view_name']} as\n{metadata['text']}"

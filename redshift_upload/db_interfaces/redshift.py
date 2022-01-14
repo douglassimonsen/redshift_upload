@@ -116,7 +116,7 @@ class Interface:
             "TIMESTAMP WITH TIME ZONE": "TIMESTAMPTZ",
         }
 
-        def dealias(alias: str):
+        def dealias(alias: str) -> str:
             """
             Merges multiple names for the same column type into a single name
             """
@@ -163,7 +163,7 @@ class Interface:
                 "view_type": row["dependent_kind"],
             }
 
-        def get_grants(schema_name: str, view_name: str):
+        def get_grants(schema_name: str, view_name: str) -> str:
             """
             Lists the various SELECT grants for a table
             """

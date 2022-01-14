@@ -13,6 +13,7 @@ import random
 import botocore.exceptions
 import botocore.errorfactory
 import colorama
+from typing import Callable, Dict, List
 
 colorama.init()
 import json
@@ -66,7 +67,7 @@ table_name = "library_test_" + "".join(
 )  # needs to be out here so repeated redshift checks don't create orphan tables
 
 
-def colorize(text, level="INFO"):
+def colorize(text: str, level: str = "INFO") -> str:
     level_format = {
         "INFO": colorama.Style.BRIGHT + colorama.Fore.CYAN,
         "SUCCESS": colorama.Fore.GREEN,
@@ -76,7 +77,7 @@ def colorize(text, level="INFO"):
     return level_format[level] + text + colorama.Style.RESET_ALL
 
 
-def get_val(section, param):
+def get_val(section: str, param: str) -> str | int | bool | None:
     question = f"What is the value for {param}"
     default_val = None
 
@@ -97,14 +98,14 @@ def get_val(section, param):
     return formatting_options.get(param, lambda x: x)(ret)
 
 
-def yes_no(question):
+def yes_no(question: str) -> str:
     raw = input(colorize(f"{question} (y/n): ")).lower()
     if raw not in ("y", "n"):
         return yes_no(question)
     return raw
 
 
-def fix_schema(user):
+def fix_schema(user: Dict) -> None:
     print("Testing it matches the credential JSONSchema...")
     try:
         jsonschema.validate(user, credential_store.SCHEMA)
@@ -116,14 +117,16 @@ def fix_schema(user):
         return fix_schema(user)
 
 
-def unhandled_aws_error(error):
+def unhandled_aws_error(error: BaseException) -> None:
     print(colorize("Unhandled error :(", "ERROR"))
     print(error)
     print(error.response)
     raise ValueError
 
 
-def test_failed(error_msg, bad_params, user, test_func):
+def test_failed(
+    error_msg: str, bad_params: List[List[str]], user: Dict, test_func: Callable
+) -> None:
     print(colorize(error_msg, "WARNING"))
     for param in bad_params:
         user[param[0]][param[1]] = get_val(param[0], param[1])
@@ -131,7 +134,7 @@ def test_failed(error_msg, bad_params, user, test_func):
         return test_func(user)
 
 
-def test_s3(user):
+def test_s3(user: Dict) -> None:
     # test accesss/secret key
     # test bucket can be written to
     # test bucket can be deleted from
@@ -188,7 +191,7 @@ def test_s3(user):
     print(colorize("S3 permissions tested successfully", "SUCCESS"))
 
 
-def test_redshift(user):
+def test_redshift(user: Dict) -> None:
     # test create/delete table
     print(colorize("Testing Redshift Permissions"))
     try:
@@ -262,12 +265,12 @@ def test_redshift(user):
     print(colorize("Redshift permissions tested successfully", "SUCCESS"))
 
 
-def test_connections(user):
+def test_connections(user) -> None:
     test_redshift(user)
     test_s3(user)
 
 
-def test_vals(user):
+def test_vals(user) -> None:
     do_tests = yes_no("Do you want to verify these values are correct?")
     if do_tests == "n":
         return
@@ -277,7 +280,7 @@ def test_vals(user):
     print(colorize("Connections tested successfully", "SUCCESS"))
 
 
-def main():
+def main() -> None:
     print(intro)
     user = {"s3": {}, "db": {}, "constants": {}}
     for section, params in param_sections.items():

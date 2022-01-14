@@ -1,5 +1,5 @@
 import pandas  # type: ignore
-from typing import List, Dict, Tuple, Iterator, Any, Optional
+from typing import Iterable, List, Dict, Tuple, Iterator, Any, Optional
 import logging
 import sys
 import io
@@ -31,7 +31,7 @@ class Source:
     A class representing the data to be loaded to Redshift
     """
 
-    def __init__(self, f: io.StringIO):
+    def __init__(self, f: io.StringIO) -> None:
         f.seek(0)
         dict_reader = csv.DictReader(f)
         self.source = f
@@ -42,18 +42,18 @@ class Source:
         self.fixed_columns: List = []
 
     @staticmethod
-    def _count_rows(iterable):
+    def _count_rows(iterable: Iterable) -> int:
         # This is 10-25% faster than len(list())
         # See: https://stackoverflow.com/questions/3345785/getting-number-of-elements-in-an-iterator-in-python
         counter = itertools.count()
         collections.deque(zip(iterable, counter), maxlen=0)
         return next(counter)
 
-    def dictrows(self):
+    def dictrows(self) -> csv.DictReader:
         self.source.seek(0)
         return csv.DictReader(self.source)
 
-    def rows(self):
+    def rows(self) -> Iterable:
         self.source.seek(0)
         return csv.reader(self.source)
 
@@ -70,7 +70,7 @@ class CustomFormatter(logging.Formatter):
         logging.CRITICAL: colorama.Fore.RED + format + reset,
     }
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
@@ -94,7 +94,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     Breaks the single file into multiple smaller chunks to speed loading into S3 and copying into Redshift
     """
 
-    def ideal_load_count():
+    def ideal_load_count() -> int:
         if upload_options["load_in_parallel"]:
             return upload_options["load_in_parallel"]
         load_count = int(max(1, math.log10(source.num_rows)))  # sort of arbitrary tbh
@@ -120,7 +120,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     ], load_in_parallel
 
 
-def load_source(source: constants.SourceOptions, upload_options=None) -> Source:
+def load_source(source: constants.SourceOptions, upload_options: Dict = None) -> Source:
     """
     Loads/transforms the source data to simplify data handling for the rest of the program.
     Accepts a DataFrame, a csv.reader, a list, or a path to a csv/xlsx file.
@@ -225,7 +225,7 @@ def fix_column_types(
     If varchars are longer than acceptable for the remote, expands the column
     """
 
-    def clean_column(col: str, i: int, cols: List):
+    def clean_column(col: str, i: int, cols: List[str]) -> str:
         col_count = cols[:i].count(col)
         if col_count != 0:
             col = f"{col}{col_count + 1}"

@@ -1,4 +1,4 @@
-def upload_args():
+def upload_args() -> None:
     ret = """
     The upload_options dictionary contains the following possible keys:
 

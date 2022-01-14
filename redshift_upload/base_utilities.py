@@ -17,8 +17,8 @@ class change_directory:
         else:
             self.new_dir = directory
 
-    def __enter__(self, *args) -> None:
+    def __enter__(self, *_) -> None:
         os.chdir(self.new_dir)
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *_) -> None:
         os.chdir(self.old_dir)

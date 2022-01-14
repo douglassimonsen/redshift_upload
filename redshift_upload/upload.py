@@ -24,7 +24,7 @@ def upload(
     column_types: Dict = None,
     schema_name: str = None,
     table_name: str = None,
-    upload_options: Dict = None,
+    upload_options: Dict | None = None,
     user: str | None = None,
     log_level: str = "INFO",
     interface: redshift.Interface = None,

@@ -2,7 +2,7 @@ import datetime
 from typing import Dict, List
 
 
-def date_func(x: str, type_info: Dict):
+def date_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid date"""
     # Timestamp must be between 4713-01-01 BC and 5874897-12-31. Not implemented because it seems unnecessary
     if x == "":
@@ -15,7 +15,7 @@ def date_func(x: str, type_info: Dict):
         return False
 
 
-def timestamptz_func(x: str, type_info: Dict):
+def timestamptz_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid timestamptz"""
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == "":
@@ -29,7 +29,7 @@ def timestamptz_func(x: str, type_info: Dict):
     return False
 
 
-def timestamp_func(x: str, type_info: Dict):
+def timestamp_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid timestamp"""
     # Timestamp must be between 4713-01-01 00:00:00 BC and 5874897-12-31 12:59:59. Not implemented because it seems unnecessary
     if x == "":
@@ -43,7 +43,7 @@ def timestamp_func(x: str, type_info: Dict):
     return False
 
 
-def smallint_func(x: str, type_info: Dict):
+def smallint_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid smallint"""
     if x == "":
         return True
@@ -56,7 +56,7 @@ def smallint_func(x: str, type_info: Dict):
         return False
 
 
-def int_func(x: str, type_info: Dict):
+def int_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid int"""
     if x == "":
         return True
@@ -69,7 +69,7 @@ def int_func(x: str, type_info: Dict):
         return False
 
 
-def bigint_func(x: str, type_info: Dict):
+def bigint_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid bigint"""
     if x == "":
         return True
@@ -84,7 +84,7 @@ def bigint_func(x: str, type_info: Dict):
         return False
 
 
-def double_precision_func(x: str, type_info: Dict):
+def double_precision_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid double precision"""
     if x == "":
         return True
@@ -95,7 +95,7 @@ def double_precision_func(x: str, type_info: Dict):
         return False
 
 
-def boolean_func(x: str, type_info: Dict):
+def boolean_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid boolean"""
     if x == "":
         return True
@@ -103,14 +103,14 @@ def boolean_func(x: str, type_info: Dict):
     return str(x).lower() in bool_opts
 
 
-def varchar_func(x: str, type_info: Dict):
+def varchar_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a string less than 65536 bytes"""
     row_len = len(str(x).encode("utf-8"))
     type_info["suffix"] = max(row_len, type_info["suffix"] or 1)
     return row_len < 65536
 
 
-def timetz_func(x: str, type_info: Dict):
+def timetz_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid timetz"""
     if x == "":
         return True
@@ -121,7 +121,7 @@ def timetz_func(x: str, type_info: Dict):
         return False
 
 
-def time_func(x: str, type_info: Dict):
+def time_func(x: str, type_info: Dict) -> bool:
     """Tests if the string is a valid time"""
     if x == "":
         return True
@@ -132,7 +132,7 @@ def time_func(x: str, type_info: Dict):
         return False
 
 
-def not_implemented(x, type_info):
+def not_implemented(x: str, type_info: Dict) -> bool:
     """Default function"""
     return False
 

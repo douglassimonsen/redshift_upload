@@ -1,6 +1,7 @@
 import json
 import os
 import jsonschema
+from typing import Dict
 
 try:
     from .. import base_utilities
@@ -86,7 +87,7 @@ for property in SCHEMA["required"]:
     assert set(base["properties"].keys()) == set(base["required"])
 
 
-def _get_serialized_store(file_path):
+def _get_serialized_store(file_path: str) -> Dict:
     with base_utilities.change_directory():
         if not os.path.exists(file_path):
             return {
@@ -98,7 +99,7 @@ def _get_serialized_store(file_path):
 
 
 class Store:
-    def __init__(self, file_path="store.json") -> None:
+    def __init__(self, file_path: str = "store.json") -> None:
         """
         file_path: string
         The filepath to load and save the store. Can be relative to credential_store.py file directory
@@ -110,7 +111,7 @@ class Store:
         self.profiles = store["profiles"]
         self.default = store["default"]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Dict:
         if not isinstance(key, str):
             raise KeyError(
                 f"The profile name must be a string. You passed the value: {key}"
@@ -120,17 +121,17 @@ class Store:
         except KeyError:
             raise KeyError("That profile does not exist in the store")
 
-    def __setitem__(self, key, profile):
+    def __setitem__(self, *_) -> None:
         raise KeyError("You're not allowed to directly set to the credential store")
 
-    def add(self, profile):
+    def add(self, profile: Dict) -> None:
         jsonschema.validate(instance=profile, schema=SCHEMA)
         self.profiles[profile["db"]["user"]] = profile
         if self.default is None:
             self.default = profile["db"]["user"]
         self._save()
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         del self.profiles[key]
         if not self.profiles:
             self.default = None
@@ -149,39 +150,39 @@ class Store:
 
         super(Store, self).__setattr__(name, value)
 
-    def __call__(self):
+    def __call__(self) -> Dict:
         return self.__getitem__(self.default)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.profiles)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"""
         default: {self.default}
         profiles: {list(self.profiles.keys())}
         """
 
-    def _save(self):
+    def _save(self) -> None:
         with base_utilities.change_directory():
             with open(self.file_path, "w") as f:
                 json.dump(
                     {"profiles": self.profiles, "default": self.default}, f, indent=4
                 )
 
-    def delete(self):
+    def delete(self) -> None:
         with base_utilities.change_directory():
             if os.path.exists(
                 self.file_path
             ):  # I know this is *technically* a race condition, but I don't like try/except
                 os.remove(self.file_path)
 
-    def clear(self):
+    def clear(self) -> None:
         self.default = None
         self.profiles = {}
         self._save()
 
 
-def set_store(store):
+def set_store(store) -> None:
     global credentials
     credentials = Store(store)
 

@@ -1,5 +1,6 @@
 import psycopg2
 import logging
+from typing import List, Dict
 
 try:
     from .credential_store import credential_store
@@ -10,7 +11,7 @@ log = logging.getLogger("redshift_utilities-test")
 credential_store.set_store("test-library")
 
 
-def drop_tables(tables, aws_creds=None):
+def drop_tables(tables: List[str], aws_creds: Dict = None) -> None:
 
     if aws_creds is None:
         aws_creds = credential_store.credentials()
