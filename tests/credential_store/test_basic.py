@@ -13,7 +13,13 @@ sample_creds = {
         "user": "user",
         "password": "pass",
     },
-    "constants": {"bucket": "bucket-name", "default_schema": "test"},
+    "constants": {
+        "bucket": "bucket-name",
+        "default_schema": "test",
+        "get_table_lock": True,
+        "logging_endpoint": None,
+        "logging_endpoint_type": None,
+    },
     "s3": {
         "access_key": "AAAAAAAAAA0000000000",
         "secret_key": "AAAAAAAAAAAbbbbbbbbb999999999999999999/=",

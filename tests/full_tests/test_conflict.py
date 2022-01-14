@@ -34,7 +34,7 @@ def test_conflict():
     upload(
         source=df,
         table_name=table_name,
-        aws_info="analyst1",
+        user="analyst1",
     )
     user2 = credential_store.credentials.profiles["analyst2"]
     with get_conn(user2) as conn:
@@ -45,7 +45,7 @@ def test_conflict():
     upload(
         source=df,
         table_name=table_name,
-        aws_info="analyst1",
+        user="analyst1",
         upload_options={"close_on_end": False, "drop_table": True},
     )
     with get_conn(user2) as conn:
