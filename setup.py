@@ -25,8 +25,12 @@ setuptools.setup(
     install_requires=[
         "boto3",
         "boto3-stubs[s3]",
+        "click",
+        "colorama",
+        "jsonschema",
         "pandas",
         "psycopg2",
+        "pytest",
         "toposort",
     ],
 )

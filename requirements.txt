@@ -1,11 +1,13 @@
+click
+colorama
+fuzzywuzzy
+jsonschema
 mypy_boto3_s3
 numpy
 pandas
 psycopg2
+pytest
 toposort
-fuzzywuzzy
-colorama
-jsonschema
 
 [build]
 pre-commit
