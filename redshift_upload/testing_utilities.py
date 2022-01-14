@@ -12,7 +12,9 @@ credential_store.set_store("test-library")
 
 
 def drop_tables(tables: List[str], aws_creds: Dict = None) -> None:
-
+    """
+    Tries to drop a table in a list and all their dependencies
+    """
     if aws_creds is None:
         aws_creds = credential_store.credentials()
     if isinstance(tables, str):

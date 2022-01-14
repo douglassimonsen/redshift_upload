@@ -87,7 +87,7 @@ for property in SCHEMA["required"]:
     assert set(base["properties"].keys()) == set(base["required"])
 
 
-def _get_serialized_store(file_path: str) -> Dict:
+def _deserialize_store(file_path: str) -> Dict:
     with base_utilities.change_directory():
         if not os.path.exists(file_path):
             return {
@@ -107,7 +107,7 @@ class Store:
         if not file_path.endswith(".json"):
             file_path += ".json"
         self.file_path = file_path
-        store = _get_serialized_store(file_path)
+        store = _deserialize_store(file_path)
         self.profiles = store["profiles"]
         self.default = store["default"]
 
@@ -125,6 +125,7 @@ class Store:
         raise KeyError("You're not allowed to directly set to the credential store")
 
     def add(self, profile: Dict) -> None:
+        """Add a profile to the store and save to file"""
         jsonschema.validate(instance=profile, schema=SCHEMA)
         self.profiles[profile["db"]["user"]] = profile
         if self.default is None:
@@ -163,6 +164,7 @@ class Store:
         """
 
     def _save(self) -> None:
+        """Updates the store file with the new data"""
         with base_utilities.change_directory():
             with open(self.file_path, "w") as f:
                 json.dump(
@@ -170,6 +172,7 @@ class Store:
                 )
 
     def delete(self) -> None:
+        """Deletes the file backing the store"""
         with base_utilities.change_directory():
             if os.path.exists(
                 self.file_path
@@ -177,12 +180,14 @@ class Store:
                 os.remove(self.file_path)
 
     def clear(self) -> None:
+        """Resets the store to be empty"""
         self.default = None
         self.profiles = {}
         self._save()
 
 
-def set_store(store) -> None:
+def set_store(store: str) -> None:
+    """You can have multiple stores. The default store is store.json. This will set this to a new store, globally"""
     global credentials
     credentials = Store(store)
 

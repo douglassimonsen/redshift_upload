@@ -12,18 +12,19 @@ from pathlib import Path
 
 @click.group()
 def cli() -> None:
+    """This is used to group the other commands"""
     pass
 
 
 @click.command()
 def explain_upload_args() -> None:
-    "Explains the valid arguments for upload_args"
+    """Explains the valid arguments for upload_args"""
     show_help.upload_args()
 
 
 @click.command()
 def help() -> None:
-    "Information on how to use this tool"
+    """Information on how to use this tool"""
     print(
         "For more complete examples, visit https://github.com/douglassimonsen/redshift_upload"
     )
@@ -31,13 +32,13 @@ def help() -> None:
 
 @click.command()
 def add_user() -> None:
-    "Starts a cli to create a user for the library"
+    """Starts a cli to create a user for the library"""
     show_add_user.main()
 
 
 @click.command()
 def run_tests() -> None:
-    "Runs the test suite"
+    """Runs the test suite"""
     os.chdir(Path(__file__).parents[1])
     pytest.main(["."])
 

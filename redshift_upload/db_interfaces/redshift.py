@@ -66,7 +66,7 @@ class Interface:
 
     def get_db_conn(self, user=None) -> constants.Connection:
         """
-        Gets DB connection. Caches connection for later use
+        Gets DB connection. Caches connection for later use, per user
         """
         if user is None:
             user = self.aws_info["db"]["user"]
