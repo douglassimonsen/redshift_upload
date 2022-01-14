@@ -32,6 +32,7 @@ param_sections = {
         "bucket",
         "logging_endpoint",
         "logging_endpoint_type",
+        "get_table_lock",
     ],
 }
 
@@ -47,7 +48,11 @@ if default_user is not None:
 else:
     default_params = {
         "db": {"port": 5439},
-        "constants": {"default_schema": "public", "logging_endpoint_type": "db"},
+        "constants": {
+            "default_schema": "public",
+            "logging_endpoint_type": "db",
+            "get_table_lock": True,
+        },
         "s3": {},
     }
 s3_name = "library_test/" + "".join(
@@ -84,6 +89,8 @@ def get_val(param, section):
         ret = int(ret)
     if param in ("logging_endpoint", "logging_endpoint_type"):
         ret = ret or None
+    if param == "get_table_lock":
+        ret = ret.lower()[0] == "t"  # true, t are converted to True
     return ret
 
 

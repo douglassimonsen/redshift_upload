@@ -27,11 +27,15 @@ SCHEMA = {
                     "type": ["string", "null"],
                     "enum": ["db", "api", None],
                 },
+                "get_table_lock": {
+                    "type": "boolean",
+                },
             },
             "additionalProperties": False,
             "required": [
                 "bucket",
                 "default_schema",
+                "get_table_lock",
                 "logging_endpoint",
                 "logging_endpoint_type",
             ],

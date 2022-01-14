@@ -288,6 +288,12 @@ class Interface:
         if not self.table_exists:  # nothing to lock against
             return conn, cursor
 
+        if not self.aws_info["constants"]["get_table_lock"]:
+            log.warning(
+                "User has decided not to try to get an exclusive lock on the table"
+            )
+            return conn, cursor
+
         log.info("Acquiring an exclusive lock on the Redshift table")
         cursor.execute(f"SET statement_timeout = {self.lock_timeout}")
         cursor.execute(

@@ -5,7 +5,7 @@ import click
 import os
 import sys
 import psycopg2
-import copy
+
 
 try:
     from ...credential_store import credential_store
@@ -151,6 +151,7 @@ def create_stack(stack):
         "bucket": bucket,
         "logging_endpoint": None,
         "logging_endpoint_type": None,
+        "get_table_lock": True,
     }
     redshift_users = create_redshift_users(redshift_id)
     for redshift in redshift_users:
