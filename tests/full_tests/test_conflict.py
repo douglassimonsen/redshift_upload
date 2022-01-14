@@ -2,10 +2,9 @@ try:
     from redshift_upload import upload, credential_store, testing_utilities  # noqa
 except ModuleNotFoundError:
     import sys, os
+    from pathlib import Path
 
-    sys.path.insert(
-        0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
+    sys.path.insert(0, Path(__file__).parents[2])
     from redshift_upload import upload, credential_store, testing_utilities  # noqa
 import pytest
 import psycopg2

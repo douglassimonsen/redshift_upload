@@ -2,7 +2,7 @@ import setuptools
 import sys, os
 from pathlib import Path
 
-this_directory = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
+this_directory = Path(__file__).parent.replace("\\", "/")
 sys.path.insert(0, this_directory)
 from redshift_upload import __version__
 

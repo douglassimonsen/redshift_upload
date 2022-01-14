@@ -9,8 +9,9 @@ from typing import Dict, List, Tuple
 
 if __name__ == "__main__":
     import sys, os
+    from pathlib import Path
 
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.insert(0, Path(__file__).parents[1])
 try:
     import base_utilities, constants
     from credential_store import credential_store

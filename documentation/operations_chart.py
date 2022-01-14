@@ -1,7 +1,8 @@
 from graphviz import Digraph
 import os
+from pathlib import Path
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(Path(__file__).parent)
 dot = Digraph(comment="Code Flow", format="png")
 
 dot.node("A", "Check option coherence", style="filled", fillcolor="#add8e6")

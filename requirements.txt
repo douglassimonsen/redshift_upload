@@ -12,4 +12,4 @@ toposort
 [build]
 pre-commit
 twine
-
+graphviz

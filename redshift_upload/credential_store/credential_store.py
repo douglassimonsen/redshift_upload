@@ -6,8 +6,9 @@ try:
     from .. import base_utilities
 except:
     import sys
+    from pathlib import Path
 
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.insert(0, Path(__file__).parents[1])
     import base_utilities
 
 

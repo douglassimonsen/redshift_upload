@@ -3,6 +3,7 @@ import pytest
 import os
 from jsonschema.exceptions import ValidationError
 import copy
+from pathlib import Path
 
 sample_creds = {
     "db": {
@@ -89,7 +90,7 @@ def test_clear_store():
 def test_delete_store():
     credential_store.credentials.delete()
     file_path = os.path.join(
-        os.path.dirname(os.path.abspath(credential_store.__file__)),
+        Path(credential_store.__file__).parent,
         credential_store.credentials.file_path,
     )
     assert not os.path.exists(file_path)

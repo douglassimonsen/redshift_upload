@@ -7,6 +7,7 @@ except ModuleNotFoundError:
 import click
 import pytest
 import os
+from pathlib import Path
 
 
 @click.group()
@@ -37,7 +38,7 @@ def add_user():
 @click.command()
 def run_tests():
     "Runs the test suite"
-    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    os.chdir(Path(__file__).parents[1])
     pytest.main(["."])
 
 

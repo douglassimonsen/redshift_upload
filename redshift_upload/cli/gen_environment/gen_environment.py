@@ -3,6 +3,7 @@ import time
 import logging
 import click
 import os
+from pathlib import Path
 import sys
 import psycopg2
 
@@ -10,14 +11,9 @@ import psycopg2
 try:
     from ...credential_store import credential_store
 except ImportError:
-    sys.path.insert(
-        0,
-        os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        ),
-    )
+    sys.path.insert(0, Path(__file__).parents[2])
     from credential_store import credential_store
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(Path(__file__).parent)
 # TODO paginate results
 
 
