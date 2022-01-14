@@ -8,6 +8,8 @@ import math
 import itertools
 import collections
 import colorama
+
+colorama.init()
 import requests
 import datetime
 import getpass

@@ -12,6 +12,8 @@ import random
 import botocore.exceptions
 import botocore.errorfactory
 import colorama
+
+colorama.init()
 import json
 
 
