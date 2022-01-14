@@ -45,10 +45,6 @@ def upload_args() -> None:
     skip_views:
     Default: False
     Does not attempt to save/reinstantiate view
-
-    no_header:
-    Default: False
-    Indicates the CSV has no header row at the beginning. The uploader will otherwise consider every row to be data
     """.strip()
     ret = "\n".join(line.lstrip() for line in ret.split("\n"))
     print(ret)

@@ -29,7 +29,6 @@ UPLOAD_DEFAULTS = {
     "stream_from_file": False,
     "skip_views": False,
     "node_count": 1,
-    "no_header": False,  # indicates the CSV has no header row at the beginning
     "default_timeout": 30 * 60 * 1000,  # 30 minutes
     "lock_timeout": 5 * 1000,  # 5 seconds
 }
