@@ -109,8 +109,8 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         min_s3_size = 1 * 1024 ** 2 / 0.7  # 1   MB
         max_s3_size = 125 * 1024 ** 2 / 0.7  # 125 BB
 
-        min_slices = source.size // max_s3_size
-        max_slices = source.size // min_s3_size
+        min_slices = int(source.size // max_s3_size)
+        max_slices = int(source.size // min_s3_size)
 
         # Slicing protocol:
         # Suppose we have a file of n bytes

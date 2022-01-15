@@ -10,17 +10,13 @@ import psycopg2.extras
 import psycopg2
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[2]))
-from redshift_upload import upload, base_utilities  # noqa
-import json  # noqa
+from redshift_upload import upload, base_utilities, credential_store  # noqa
 
-with base_utilities.change_directory():
-    with open("../aws_creds.json") as f:
-        aws_creds = json.load(f)
 POWERS_CHECKED = 8
 
 
 def get_conn():
-    return psycopg2.connect(**aws_creds["db"])
+    return psycopg2.connect(**credential_store.credentials()["db"])
 
 
 def library(data, table_name):
@@ -32,7 +28,6 @@ def library(data, table_name):
             "skip_checks": True,
             "default_logging": False,
         },
-        aws_info=aws_creds,
     )
 
 
@@ -107,7 +102,7 @@ def test_method(args):
     data = [{"a": "hi" * 10} for _ in range(row_count)]
     table_name = f"perf_test_{method.__name__}_{version}"
     if row_count < 10_000:
-        number = 1
+        number = 3
     elif row_count < 100_000:
         number = 1
     else:
@@ -121,6 +116,14 @@ def test_method(args):
     }
     print(row_count, method.__name__, "finished")
     return ret
+
+
+print(
+    timeit.timeit(
+        functools.partial(library, [10 ** x for x in range(POWERS_CHECKED)], "test4")
+    )
+)
+exit()
 
 
 def main():

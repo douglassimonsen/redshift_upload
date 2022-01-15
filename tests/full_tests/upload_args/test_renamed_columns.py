@@ -1,6 +1,6 @@
 import pytest
 from redshift_upload import upload, testing_utilities  # noqa
-import pandas  # noqa
+import datetime  # noqa
 
 table_name = (
     "unit_" + __file__.replace("\\", "/").split("/")[-1].split(".")[0]
@@ -14,17 +14,23 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
-df = pandas.DataFrame(columns=["a", "b"])
+df1 = [{"a" * 50: 1}]
+df2 = [{"a" * 50: 1}]
 
 
-def test_no_data(schema):
-    return upload(
-        source=df,
+def test_drop_table(schema):
+    upload(
+        source=df1,  # needed for the comparison later
         schema_name=schema,
         table_name=table_name,
-        upload_options={"load_in_parallel": 10, "truncate_table": True},
+        upload_options={"drop_table": True},
+    )
+    upload(
+        source=df2,  # needed for the comparison later
+        schema_name=schema,
+        table_name=table_name,
     )
 
 
 if __name__ == "__main__":
-    test_no_data()
+    test_drop_table()

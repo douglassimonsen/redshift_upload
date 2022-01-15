@@ -20,7 +20,7 @@ df2 = pandas.DataFrame(
 )
 
 
-def test_add_column(schema):
+def test_add_column_fail(schema):
     upload(
         source=df1,
         schema_name=schema,
@@ -35,5 +35,21 @@ def test_add_column(schema):
         )
 
 
+def test_add_column_succeed(schema):
+    upload(
+        source=df1,
+        schema_name=schema,
+        table_name=table_name,
+        upload_options={"load_in_parallel": 10, "drop_table": True},
+    )
+    upload(
+        source=df2,
+        schema_name=schema,
+        table_name=table_name,
+        upload_options={"allow_alter_table": True},
+    )
+
+
 if __name__ == "__main__":
-    test_add_column("public")
+    test_add_column_fail("public")
+    test_add_column_succeed("public")
