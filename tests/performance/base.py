@@ -111,19 +111,12 @@ def test_method(args):
         "rows": row_count,
         "time": timeit.timeit(
             functools.partial(method, data, table_name), number=number
-        ),
+        )
+        / number,  # timeit returns the total time taken, so we need to divide to get average
         "method": pretty(method),
     }
     print(row_count, method.__name__, "finished")
     return ret
-
-
-print(
-    timeit.timeit(
-        functools.partial(library, [10 ** x for x in range(POWERS_CHECKED)], "test4")
-    )
-)
-exit()
 
 
 def main():
