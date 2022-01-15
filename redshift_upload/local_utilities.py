@@ -14,6 +14,8 @@ colorama.init()
 import requests
 import datetime
 import getpass
+import bz2
+
 
 try:
     import constants, column_type_utilities  # type: ignore
@@ -103,8 +105,9 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         # sort of arbitrary tbh. Really should be breaking it into 1GB chunks, but don't know how to do that efficiently & in parallel
 
         # https://docs.aws.amazon.com/redshift/latest/dg/c_best-practices-use-multiple-files.html
-        min_s3_size = 1 * 1024 ** 2  # 1   MB
-        max_s3_size = 125 * 1024 ** 2  # 125 BB
+        # We're dividing by 70% because the BZIP2 seems to compress things by 30% and we are sending the compressed blobs, but currently working with the uncompressed data
+        min_s3_size = 1 * 1024 ** 2 / 0.7  # 1   MB
+        max_s3_size = 125 * 1024 ** 2 / 0.7  # 125 BB
 
         min_slices = source.size // max_s3_size
         max_slices = source.size // min_s3_size
@@ -131,11 +134,12 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
             )  # less than 1 MB doesn't make sense to chunk, cannot have more groups than rows, otherwise it breaks
 
     def chunk_to_string(chunk: List[str]) -> bytes:
-        f = io.StringIO()
-        writer = csv.writer(f)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
         writer.writerows(chunk)
-        f.seek(0)
-        return f.read().encode("utf-8")
+        buffer.seek(0)
+        compressed = bz2.compress(buffer.read().encode("utf-8"))
+        return compressed
 
     rows = list(source.rows())[1:]  # the first is the header
     load_in_parallel = ideal_load_count()
