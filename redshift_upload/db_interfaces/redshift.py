@@ -187,14 +187,13 @@ class Interface:
                 return "\n\n".join(grants)  # the \n\n is just to be more
 
         def format_row(row: List) -> Dict:
+            dep_types = {"m": "materialized view", "v": "view"}
             return {
-                "full_name": f"{row[0]}.{row[1]}",
-                "dependency": f"{row[4]}.{row[5]}",
-                "dependent_kind": {"m": "materialized view", "v": "view"}.get(
-                    row[2], row[2]
-                ),
-                "viewowner": row[3],
-                "grants": get_grants(row[0], row[1]),
+                "full_name": f"{row['child_schema']}.{row['child_view']}",
+                "dependency": f"{row['parent_schema']}.{row['parent_table']}",
+                "dependent_kind": dep_types[row["child_kind"]],
+                "viewowner": row["viewowner"],
+                "grants": get_grants(row["child_schema"], row["child_view"]),
             }
 
         unsearched_views = [
@@ -212,7 +211,10 @@ class Interface:
                         "table_name": view.split(".", 1)[1],
                     },
                 )
-                data = [format_row(row) for row in cursor.fetchall()]
+                columns = [x[0] for x in cursor.description]
+                data = [
+                    format_row(dict(zip(columns, row))) for row in cursor.fetchall()
+                ]
             dependencies.extend(data)
             unsearched_views.extend(row["full_name"] for row in data)
             unsearched_views.pop(0)

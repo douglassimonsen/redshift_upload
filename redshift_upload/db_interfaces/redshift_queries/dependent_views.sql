@@ -1,9 +1,9 @@
-SELECT distinct dependent_ns.nspname as dependent_schema,
-                dependent_view.relname as dependent_view,
-                dependent_view.relkind as dependent_kind,
+SELECT distinct dependent_ns.nspname as child_schema,
+                dependent_view.relname as child_view,
+                dependent_view.relkind as child_kind,
                 pg_views.viewowner,
-                source_ns.nspname,
-                source_table.relname
+                source_ns.nspname as parent_schema,
+                source_table.relname as parent_table
 
 FROM pg_depend
 
