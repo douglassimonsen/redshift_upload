@@ -8,6 +8,7 @@ import math
 import itertools
 import collections
 import colorama
+import os
 
 colorama.init()
 import requests
@@ -32,6 +33,8 @@ class Source:
     """
 
     def __init__(self, f: io.StringIO) -> None:
+        f.seek(0, os.SEEK_END)
+        self.size = f.tell()
         f.seek(0)
         dict_reader = csv.DictReader(f)
         self.source = f
@@ -97,10 +100,35 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
     def ideal_load_count() -> int:
         if upload_options["load_in_parallel"]:
             return upload_options["load_in_parallel"]
-        load_count = int(max(1, math.log10(source.num_rows)))  # sort of arbitrary tbh
-        return load_count - (
-            load_count % upload_options["node_count"]
-        )  # the slices should ideally be a multiple of the node count, see https://docs.aws.amazon.com/redshift/latest/dg/t_splitting-data-files.html
+        # sort of arbitrary tbh. Really should be breaking it into 1GB chunks, but don't know how to do that efficiently & in parallel
+
+        # https://docs.aws.amazon.com/redshift/latest/dg/c_best-practices-use-multiple-files.html
+        min_s3_size = 1 * 1024 ** 2  # 1   MB
+        max_s3_size = 125 * 1024 ** 2  # 125 BB
+
+        min_slices = source.size // max_s3_size
+        max_slices = source.size // min_s3_size
+
+        # Slicing protocol:
+        # Suppose we have a file of n bytes
+        # 1. If we have more than max_s3_size of data, we split it into the largest of:
+        #   a. the greatest multiple of node_count less than (n // max_s3_size)
+        #   b. node_count
+        # 2. If we have more than min_s3_size of data, we split it into the largest of:
+        #   a. the greatest multiple of node_count less than (n // min_s3_size)
+        #   b. node_count
+        # 3. Otherwise,
+
+        if min_slices > 0:
+            min_slices -= min_slices % upload_options["node_count"]
+            return max(min_slices, upload_options["node_count"])
+        elif max_slices > 0:
+            max_slices -= max_slices % upload_options["node_count"]
+            return max(max_slices, upload_options["node_count"])
+        else:
+            return min(
+                1, source.num_rows
+            )  # less than 1 MB doesn't make sense to chunk, cannot have more groups than rows, otherwise it breaks
 
     def chunk_to_string(chunk: List[str]) -> bytes:
         f = io.StringIO()
@@ -110,9 +138,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         return f.read().encode("utf-8")
 
     rows = list(source.rows())[1:]  # the first is the header
-    load_in_parallel = min(
-        ideal_load_count(), source.num_rows
-    )  # cannot have more groups than rows, otherwise it breaks
+    load_in_parallel = ideal_load_count()
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [
         chunk_to_string(rows[offset : (offset + chunk_size)])  # noqa
