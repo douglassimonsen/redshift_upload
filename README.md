@@ -228,3 +228,6 @@ This project uses a [Black](https://black.readthedocs.io/en/stable/) pre-commit 
 1. Update the version in `redshift_upload/__init__.py`
 2. Run `python push.py`
 5. Check [actions](https://github.com/douglassimonsen/redshift_upload/actions) for deployment progress
+
+## Warnings
+1. For the case of `varchar`, this program converts all empty strings to null. This was noticed late in development and probably can't be fixed :(

@@ -73,9 +73,10 @@ def bigint_func(x: str, _: Dict) -> bool:
     """Tests if the string is a valid bigint"""
     if x == "":
         return True
-    x = x.rstrip("0").rstrip(
-        "."
-    )  # rstrip would take 1.1.0.0 -> 1.1, so we do it in two steps. Technically, this would take 1234..0 -> 1234, but that's a problem for future me
+    x = x.rstrip("0").rstrip(".")
+    # rstrip would take 1.1.0.0 -> 1.1, so we do it in two steps. Technically,
+    # this would take 1234..0 -> 1234, but that's a problem for future me
+    # The solution is to use removesuffix("."), but it was only added in 3.9 :(
     try:
         y = int(x)
         assert -9223372036854775808 <= y <= 9223372036854775807
