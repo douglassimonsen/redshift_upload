@@ -31,6 +31,7 @@ UPLOAD_DEFAULTS = {
     "node_count": 1,
     "default_timeout": 30 * 60 * 1000,  # 30 minutes
     "lock_timeout": 5 * 1000,  # 5 seconds
+    "allow_alter_table": False,
 }
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATE_FORMAT = "%Y-%m-%d"

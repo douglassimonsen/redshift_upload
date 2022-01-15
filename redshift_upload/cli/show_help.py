@@ -45,6 +45,10 @@ def upload_args() -> None:
     skip_views:
     Default: False
     Does not attempt to save/reinstantiate view
+
+    allow_alter_table
+    Default: False
+    If true and there are new columns in the local data, adds them to the Redshift table
     """.strip()
     ret = "\n".join(line.lstrip() for line in ret.split("\n"))
     print(ret)

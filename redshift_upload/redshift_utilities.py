@@ -71,7 +71,7 @@ def get_defined_columns(
 
 
 def compare_with_remote(
-    source: local_utilities.Source, interface: redshift.Interface
+    source: local_utilities.Source, upload_options: Dict, interface: redshift.Interface
 ) -> None:
     """
     Checks to see if there are any columns in the local table that's not in the database table or vice versa.
@@ -87,16 +87,26 @@ def compare_with_remote(
     if not local_cols.issubset(
         remote_cols_set
     ):  # means there are new columns in the local data
-        log.error(
-            "If these new columns are not a mistake, you may add them to the table by running:\n"
-            + "".join(
-                f"\nAlter table {interface.full_table_name} add column {col} {source.column_types[col]['type']} default null;"
-                for col in local_cols.difference(remote_cols_set)
+        alter_queries = [
+            f"""Alter table {interface.full_table_name} 
+            add column {col} {source.column_types[col]['type']} 
+            default null;"""
+            for col in local_cols.difference(remote_cols_set)
+        ]
+        if not upload_options["allow_alter_table"]:
+            log.error(
+                "If these new columns are not a mistake, you may add them to the table by running:\n"
+                + "\n".join(alter_queries)
             )
-        )
-        raise NotImplementedError(
-            "Haven't implemented adding new columns to the remote table yet"
-        )
+            raise NotImplementedError(
+                "Haven't implemented adding new columns to the remote table yet"
+            )
+        else:
+            conn = interface.get_db_conn()
+            with conn.cursor() as cursor:
+                for query in alter_queries:
+                    cursor.execute(query)
+            conn.commit()
 
 
 def s3_to_redshift(
