@@ -1,6 +1,6 @@
 import pytest
 from redshift_upload import upload, testing_utilities  # noqa
-
+import datetime
 
 table_name = (
     "unit_" + __file__.replace("\\", "/").split("/")[-1].split(".")[0]
@@ -14,14 +14,21 @@ def setup_and_teardown():
     # testing_utilities.drop_tables(table_name)
 
 
+dt_fmt = "%Y-%m-%d %H:%M:%S"
 df = [
     {
-        "dt_col": "2020-01-01 04:00:00",
-        "int_col": "1",
+        "dt_col": datetime.datetime.strptime("2020-01-01 04:00:00", dt_fmt),
+        "dt_str_col": "2020-01-01 04:00:00",
+        "date_col": datetime.datetime.strptime("2020-01-01 04:00:00", dt_fmt).date(),
+        "date_str_col": "2020-01-01",
         "time_col": "04:12:34",
+        "int_col": 1,
+        "int_str_col": "1",
+        "float_col": 1.2,
+        "float_str_col": "1.2",
+        "bool_col": True,
+        "bool_str_col": "True",
         "var_col": "asd",
-        "date_col": "2020-01-01",
-        "float_col": "1.2",
     }
     for _ in range(100)
 ]
@@ -40,11 +47,17 @@ def test_upload_types(schema):
         interface.get_db_conn(),
         field_types=[
             "timestamp without time zone",
-            "smallint",
-            "time without time zone",
-            "character varying(3)",
+            "timestamp without time zone",
             "date",
+            "date",
+            "time without time zone",
+            "smallint",
+            "smallint",
             "double precision",
+            "double precision",
+            "boolean",
+            "boolean",
+            "character varying(3)",
         ],
     )
 

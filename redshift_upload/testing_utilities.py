@@ -69,17 +69,15 @@ def compare_sources(local_data, remote, conn, field_types=None):
         cursor.execute(field_types_query.format(schema_name=schema, table_name=table))
         col_types = cursor.fetchall()
         col_types = [x[0] for x in col_types]
-        assert col_types == field_types
+        if col_types != field_types:
+            print(col_types)
+            raise AssertionError
 
     if field_types is not None:
         check_types()
 
     remote_vals = get_remote()
     local_vals = stringify(local_data)
-    with open("remote", "w") as f:
-        f.write(remote_vals)
-    with open("local", "w") as f:
-        f.write(local_vals)
 
     # TODO: check column types
     assert remote_vals == local_vals
