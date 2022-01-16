@@ -17,7 +17,7 @@ def setup_and_teardown():
 df = pandas.DataFrame(columns=["a", "b"])
 
 
-def test_no_data(schema):
+def test_no_verify(schema):
     upload(source=df, schema_name=schema, table_name=table_name)
     upload(
         source=df,

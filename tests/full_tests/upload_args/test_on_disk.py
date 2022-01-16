@@ -1,6 +1,5 @@
 import pytest
 from redshift_upload import upload, base_utilities, testing_utilities  # noqa
-import pandas  # noqa
 
 table_name = (
     "unit_" + __file__.replace("\\", "/").split("/")[-1].split(".")[0]
@@ -14,30 +13,16 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
-def test_load_from_string(schema):
-    upload(
-        source=pandas.DataFrame([{"a": "hi"}, {"a": "hi"}]),
-        schema_name=schema,
-        table_name=table_name,
-        upload_options={"load_in_parallel": 2},
-        # log_level="WARNING"
-    )
-    upload(
-        source="a\nb\nc\n",
-        schema_name=schema,
-        table_name=table_name,
-        upload_options={"load_in_parallel": 2},
-        # log_level="WARNING"
-    )
+def test_load_stream_from_file(schema):
     with base_utilities.change_directory():
         upload(
-            source="load_source.csv",
+            source="../load_source.csv",
             schema_name=schema,
             table_name=table_name,
-            upload_options={"load_in_parallel": 2},
+            upload_options={"stream_from_file": True},
             # log_level="WARNING"
         )
 
 
 if __name__ == "__main__":
-    test_load_from_string()
+    test_load_stream_from_file()

@@ -178,6 +178,11 @@ def load_source(source: constants.SourceOptions, upload_options: Dict = None) ->
                 )
 
     if isinstance(
+        source, bytes
+    ):  # we're assuming it's utf-8 for now, but it should be converted into an upload_option later
+        source = source.decode("utf-8")
+
+    if isinstance(
         source, (io.StringIO, io.TextIOWrapper)
     ):  # the second is the type of open(x, 'r')
         return Source(source)
@@ -185,9 +190,6 @@ def load_source(source: constants.SourceOptions, upload_options: Dict = None) ->
     elif isinstance(source, str):
         log.debug(
             "If you have a CSV that happens to end with .csv, this will treat it as a path. This is a reason all files ought to end with a newline"
-        )
-        log.debug(
-            "Also, if you do not have a header row, you need to set 'header_row' = False"
         )
         if source.endswith(".csv"):
             f_in = open(source, "r")
@@ -200,8 +202,6 @@ def load_source(source: constants.SourceOptions, upload_options: Dict = None) ->
                 return Source(f_out)
 
         else:
-            if isinstance(source, bytes):
-                source = source.decode("utf-8")
             f = io.StringIO()
             f.write(source)
             return Source(f)
