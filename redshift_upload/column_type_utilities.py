@@ -147,10 +147,10 @@ DATATYPES = [
     {"type": "BIGINT", "func": bigint_func},
     {"type": "DOUBLE PRECISION", "func": double_precision_func},
     {"type": "BOOLEAN", "func": boolean_func},
-    {"type": "VARCHAR", "func": varchar_func},
     {"type": "TIMETZ", "func": timetz_func},
     {"type": "TIME", "func": time_func},
-]
+    {"type": "VARCHAR", "func": varchar_func},
+]  # VARCHAR needs to go at the end, since it's the default. Otherwise TIME never happens :(
 EXTRA_DATATYPES = [  # can be verified, but not automatically discovered
     {"type": "GEOMETRY", "func": not_implemented},
     {"type": "HLLSKETCH", "func": not_implemented},
