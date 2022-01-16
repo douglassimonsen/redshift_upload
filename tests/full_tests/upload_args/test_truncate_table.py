@@ -50,7 +50,6 @@ def test_truncate_table(df, formatter, schema):
         source=df,  # needed for the comparison later
         schema_name=schema,
         table_name=table_name,
-        upload_options={"drop_table": True},
     )
     interface = upload(
         source=df,  # needed for the comparison later

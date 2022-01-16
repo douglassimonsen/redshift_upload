@@ -31,6 +31,25 @@ def upload(
 ) -> redshift.Interface:
     """
     The main public function for uploading to redshift. Orchestrates the upload from start to finish.
+
+    Upload option defaults are:
+    "truncate_table": False,
+    "drop_table": False,
+    "cleanup_s3": True,
+    "close_on_end": True,
+    "grant_access": [],
+    "diststyle": "even",
+    "distkey": None,
+    "sortkey": None,
+    "load_in_parallel": None,
+    "default_logging": True,
+    "skip_checks": False,
+    "stream_from_file": False,
+    "skip_views": False,
+    "node_count": 1,
+    "default_timeout": 30 * 60 * 1000,  # 30 minutes
+    "lock_timeout": 5 * 1000,  # 5 seconds
+    "allow_alter_table": False,
     """
     start_time = time.time()
     source_args = source_args or []
