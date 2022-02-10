@@ -49,7 +49,7 @@ def test_load_from_string(schema):
 def test_load_from_file(schema):
     with base_utilities.change_directory():
         upload(
-            source="..\load_source.csv",
+            source="../load_source.csv",
             schema_name=schema,
             table_name=table_name,
         )

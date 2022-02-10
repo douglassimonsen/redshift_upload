@@ -22,12 +22,13 @@ df = [
         "date_col": datetime.datetime.strptime("2020-01-01 04:00:00", dt_fmt).date(),
         "date_str_col": "2020-01-01",
         "time_col": "04:12:34",
-        "int_col": 1,
+        "int_col1": 1,
+        "int_col2": 1.0,
         "int_str_col": "1",
         "float_col": 1.2,
         "float_str_col": "1.2",
         "bool_col": True,
-        "bool_str_col": "True",
+        "bool_str_col": "true",
         "var_col": "asd",
     }
     for _ in range(100)
@@ -41,6 +42,9 @@ def test_upload_types(schema):
         table_name=table_name,
         upload_options={"close_on_end": False, "drop_table": True},
     )
+    for row in df:
+        row["bool_str_col"] = "True"
+        row["int_col2"] = "1"
     testing_utilities.compare_sources(
         df,
         f"{schema}.{table_name}",
@@ -53,6 +57,7 @@ def test_upload_types(schema):
             "time without time zone",
             "smallint",
             "smallint",
+            "smallint",
             "double precision",
             "double precision",
             "boolean",
@@ -63,4 +68,4 @@ def test_upload_types(schema):
 
 
 if __name__ == "__main__":
-    test_upload_types()
+    test_upload_types("public")

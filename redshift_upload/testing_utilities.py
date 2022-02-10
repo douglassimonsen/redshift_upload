@@ -70,8 +70,16 @@ def compare_sources(local_data, remote, conn, field_types=None):
         col_types = cursor.fetchall()
         col_types = [x[0] for x in col_types]
         if col_types != field_types:
-            print(col_types)
-            raise AssertionError
+            print(
+                [
+                    [i, col_type, field_type]
+                    for i, (col_type, field_type) in enumerate(
+                        zip(col_types, field_types)
+                    )
+                    if col_type != field_type
+                ]
+            )
+            raise AssertionError("Column Type Issue")
 
     if field_types is not None:
         check_types()
@@ -79,5 +87,10 @@ def compare_sources(local_data, remote, conn, field_types=None):
     remote_vals = get_remote()
     local_vals = stringify(local_data)
 
-    # TODO: check column types
-    assert remote_vals == local_vals
+    if remote_vals != local_vals:
+        remote_data = json.loads(remote_vals)[0]
+        local_data = json.loads(local_vals)[0]
+        for (col, local), remote in zip(local_data.items(), remote_data.values()):
+            if local != remote:
+                print(f"col: {col}; local: {local}; remote: {remote}")
+        raise AssertionError("Column Value Issue")

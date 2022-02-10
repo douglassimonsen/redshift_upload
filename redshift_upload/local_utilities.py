@@ -140,7 +140,13 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         compressed = bz2.compress(buffer.read().encode("utf-8"))
         return compressed
 
+    col_conversions = [
+        col.get("converter_func", lambda x: x) for col in source.column_types.values()
+    ]
     rows = list(source.rows())[1:]  # the first is the header
+    rows = [
+        [func(x) for func, x in zip(col_conversions, row)] for row in rows
+    ]  # currently forcing 1.0, 2.0 -> 1, 2 and "true", "1" -> True
     load_in_parallel = ideal_load_count()
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [
@@ -311,7 +317,13 @@ def fix_column_types(
         k: v[0] for k, v in col_types.items()
     }  # we want the most specialized possible type for each column
     for colname, col_info in source.column_types.items():
-        if (
+        if col_info["type"] in ("SMALLINT", "INTEGER", "BIGINT"):
+            col_info["converter_func"] = lambda x: int(float(x)) if x != "" else None
+        if col_info["type"] == "BOOLEAN":
+            col_info["converter_func"] = (
+                lambda x: str(x).lower() in ("1", "true") if x != "" else None
+            )
+        elif (
             col_info["type"] == "VARCHAR"
             and interface.table_exists
             and not drop_table
