@@ -1,8 +1,7 @@
 import sys
 from pathlib import Path
 
-this_directory = Path(__file__).parent.replace("\\", "/")
-sys.path.insert(0, this_directory)
+sys.path.insert(0, Path(__file__).parent)
 
 from redshift_upload import __version__
 import git
