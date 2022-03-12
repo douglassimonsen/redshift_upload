@@ -143,9 +143,12 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         col.get("converter_func", lambda x: x) for col in source.column_types.values()
     ]
     rows = list(source.rows())[1:]  # the first is the header
-    rows = [
-        [func(x) for func, x in zip(col_conversions, row)] for row in rows
-    ]  # currently forcing 1.0, 2.0 -> 1, 2 and "true", "1" -> True
+    if not upload_options[
+        "skip_checks"
+    ]:  # necessary because with skip_checks, there are no column_types, so the zip returns a iterator with length 0.
+        rows = [
+            [func(x) for func, x in zip(col_conversions, row)] for row in rows
+        ]  # currently forcing 1.0, 2.0 -> 1, 2 and "true", "1" -> True, etc.
     load_in_parallel = ideal_load_count()
     chunk_size = math.ceil(source.num_rows / load_in_parallel)
     return [

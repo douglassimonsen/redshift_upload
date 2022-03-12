@@ -4,4 +4,4 @@ try:
     from .credential_store import credential_store  # noqa
 except ModuleNotFoundError:  # needed for when setup.py imports the __version__
     pass
-__version__ = "1.2.3"
+__version__ = "1.2.4"

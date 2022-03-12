@@ -14,7 +14,7 @@ def setup_and_teardown():
     testing_utilities.drop_tables(table_name)
 
 
-df = pandas.DataFrame(columns=["a", "b"])
+df = pandas.DataFrame(columns=["a", "b"], data=[{"a": ["1", "2"], "b": ["2", "3"]}])
 
 
 def test_no_verify(schema):
