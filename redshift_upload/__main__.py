@@ -8,11 +8,12 @@ import click
 import pytest
 import os
 from pathlib import Path
+from . import __version__
 
 
 @click.group()
 def cli() -> None:
-    """This is used to group the other commands"""
+    f"""This is used to group the other commands"""
     pass
 
 
@@ -26,7 +27,7 @@ def explain_upload_args() -> None:
 def help() -> None:
     """Information on how to use this tool"""
     print(
-        "For more complete examples, visit https://github.com/douglassimonsen/redshift_upload"
+        f"You are using version: {__version__}.\n\nFor more complete examples, visit https://github.com/douglassimonsen/redshift_upload"
     )
 
 

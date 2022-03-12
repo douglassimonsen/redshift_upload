@@ -170,18 +170,17 @@ def s3_to_redshift(
     ]:  # we're not going to truncate if the table doesn't exist yet
         truncate_table()
 
-    if source.num_rows > 0:
-        formatted_cols = [
-            psycopg2.sql.SQL("")
-            .join(
-                [
-                    psycopg2.sql.Identifier(col_name),
-                ]
-            )
-            .as_string(cursor)
-            for col_name in column_types.keys()
-        ]
-        interface.copy_table(cursor, formatted_cols)
+    formatted_cols = [
+        psycopg2.sql.SQL("")
+        .join(
+            [
+                psycopg2.sql.Identifier(col_name),
+            ]
+        )
+        .as_string(cursor)
+        for col_name in column_types.keys()
+    ]
+    interface.copy_table(cursor, formatted_cols)
 
     # we can't ensure the grant permissions have changed, so we always do it in case
     if upload_options["grant_access"]:

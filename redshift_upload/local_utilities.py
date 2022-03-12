@@ -120,7 +120,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
         # 2. If we have more than min_s3_size of data, we split it into the largest of:
         #   a. the greatest multiple of node_count less than (n // min_s3_size)
         #   b. node_count
-        # 3. If there's at least one row, we have a single chunk. Otherwise, we use no chunks
+        # 3. Otherwise, we have a single chunk
 
         if min_slices > 0:
             min_slices -= min_slices % upload_options["node_count"]
@@ -129,8 +129,7 @@ def chunkify(source: Source, upload_options: Dict) -> Tuple[List[bytes], int]:
             max_slices -= max_slices % upload_options["node_count"]
             return max(max_slices, upload_options["node_count"])
         else:
-            # less than 1 MB doesn't make sense to chunk, handles case when source.num_rows is 0 (otherwise it breaks)
-            return min(1, source.num_rows)
+            return 1
 
     def chunk_to_string(chunk: List[str]) -> bytes:
         buffer = io.StringIO()

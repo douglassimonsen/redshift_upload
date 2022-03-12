@@ -103,6 +103,10 @@ def upload(
             "The table does not yet exist, you need the checks to determine what column types to use"
         )
     source = local_utilities.load_source(source, upload_options)
+    if source.num_rows == 0:
+        raise ValueError(
+            "The source must have at least a single row to run this program"
+        )
 
     if not upload_options["skip_checks"]:
         source.predefined_columns = redshift_utilities.get_defined_columns(
@@ -120,9 +124,8 @@ def upload(
     if not upload_options["skip_views"] and interface.table_exists:
         redshift_utilities.log_dependent_views(interface)
 
-    if source.num_rows > 0:
-        sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
-        interface.load_to_s3(sources)
+    sources, load_in_parallel = local_utilities.chunkify(source, upload_options)
+    interface.load_to_s3(sources)
 
     redshift_utilities.s3_to_redshift(
         interface, source.column_types, upload_options, source
