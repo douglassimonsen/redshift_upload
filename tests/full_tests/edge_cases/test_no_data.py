@@ -18,12 +18,13 @@ df = pandas.DataFrame(columns=["a", "b"])
 
 
 def test_no_data(schema):
-    return upload(
-        source=df,
-        schema_name=schema,
-        table_name=table_name,
-        upload_options={"load_in_parallel": 10, "truncate_table": True},
-    )
+    with pytest.raises(ValueError):
+        return upload(
+            source=df,
+            schema_name=schema,
+            table_name=table_name,
+            upload_options={"load_in_parallel": 10, "truncate_table": True},
+        )
 
 
 if __name__ == "__main__":

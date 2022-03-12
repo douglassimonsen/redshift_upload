@@ -13,7 +13,7 @@ class change_directory:
     def __init__(self, directory: str = None) -> None:
         self.old_dir = os.getcwd()
         if directory is None:
-            self.new_dir = Path(inspect.getmodule(inspect.stack()[1][0]).__file__).parent  # type: ignore
+            self.new_dir = Path(inspect.getabsfile(inspect.stack()[1][0])).parent  # type: ignore
         else:
             self.new_dir = directory
 
